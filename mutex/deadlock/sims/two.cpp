@@ -21,7 +21,6 @@ void TwoFibersDeadLock() {
   // Fibers
 
   auto first = [&] {
-    // I am a Fiber
     a.Lock();
     Yield();
     b.Lock();
@@ -30,7 +29,6 @@ void TwoFibersDeadLock() {
   };
 
   auto second = [&] {
-    // I am a Fiber
     b.Lock();
     Yield();
     a.Lock();

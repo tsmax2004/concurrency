@@ -13,7 +13,6 @@ void OneFiberDeadLock() {
   Mutex mutex;
 
   auto fiber = [&] {
-    // I am a Fiber
     mutex.Lock();
     mutex.Lock();
   };
