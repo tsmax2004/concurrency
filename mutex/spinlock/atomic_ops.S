@@ -9,15 +9,15 @@
 .globl FUNCTION_NAME(AtomicExchange)
 
 FUNCTION_NAME(AtomicLoad):
-    lock movq (%rdi), %rax
+    movq (%rdi), %rax
     retq
 
 FUNCTION_NAME(AtomicStore):
-    lock movq  %rsi, (%rdi)
+    movq  %rsi, (%rdi)
     retq
 
 FUNCTION_NAME(AtomicExchange):
-    lock movq    (%rdi), %rax  # Load
+    movq    (%rdi), %rax  # Load
 loop:
     lock cmpxchg %rsi, (%rdi)  # TryStore
     jne     loop
