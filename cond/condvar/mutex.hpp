@@ -22,7 +22,7 @@ class Mutex {
 
     locked_.store(State::Free);
     if (contention_.load() >= 1) {
-      twist::rt::thread::WakeOne(key);
+      twist::ed::WakeOne(key);
     }
   }
 
