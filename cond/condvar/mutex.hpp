@@ -10,18 +10,20 @@ namespace stdlike {
 class Mutex {
  public:
   void Lock() {
-    auto old = counter_.fetch_add(1);
+    counter_.fetch_add(1);
     while (locked_.exchange(State::Contention) != State::Free) {
       twist::ed::Wait(locked_, State::Contention);
     }
     locked_.store(State::Locked);
-    if (old != counter_) {
-      locked_.store(State::Contention);
-    }
   }
 
   void Unlock() {
+    counter_.fetch_sub(1);
     auto key = twist::ed::PrepareWake(locked_);
+
+    if (counter_ >= 1) {
+      locked_.store(State::Contention);
+    }
     auto old = locked_.exchange(State::Free);
 
     if (old == State::Contention) {
