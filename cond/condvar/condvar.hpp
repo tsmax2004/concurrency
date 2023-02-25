@@ -20,13 +20,15 @@ class CondVar {
   }
 
   void NotifyOne() {
+    auto key = twist::ed::PrepareWake(sleep_);
     sleep_.fetch_add(1);
-    twist::ed::WakeOne(twist::ed::PrepareWake(sleep_));
+    twist::ed::WakeOne(key);
   }
 
   void NotifyAll() {
+    auto key = twist::ed::PrepareWake(sleep_);
     sleep_.fetch_add(1);
-    twist::ed::WakeAll(twist::ed::PrepareWake(sleep_));
+    twist::ed::WakeAll(key);
   }
 
   ~CondVar() {
