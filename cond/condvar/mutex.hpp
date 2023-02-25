@@ -10,19 +10,17 @@ namespace stdlike {
 class Mutex {
  public:
   void Lock() {
-    contention_.fetch_add(1);
-    while (locked_.exchange(State::Locked) == State::Locked) {
-      twist::ed::Wait(locked_, State::Locked);
+    while (locked_.exchange(State::Contention) != State::Free) {
+      twist::ed::Wait(locked_, State::Contention);
     }
+    locked_.store(State::Locked);
   }
 
   void Unlock() {
-    contention_.fetch_sub(1);
     auto key = twist::ed::PrepareWake(locked_);
-    auto old = contention_.load();
+    auto old = locked_.exchange(State::Free);
 
-    locked_.store(State::Free);
-    if (old >= 1) {
+    if (old == State::Contention) {
       twist::ed::WakeOne(key);
     }
   }
@@ -42,10 +40,10 @@ class Mutex {
   enum State : uint32_t {
     Free = 0,
     Locked = 1,
+    Contention = 2,
   };
 
   twist::ed::stdlike::atomic<uint32_t> locked_{0};
-  twist::ed::stdlike::atomic<uint32_t> contention_{0};
 };
 
 }  // namespace stdlike
