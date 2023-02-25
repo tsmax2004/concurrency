@@ -20,10 +20,12 @@ class Mutex {
     contention_.fetch_sub(1);
     auto key = twist::ed::PrepareWake(locked_);
 
-    locked_.store(State::Free);
-    if (contention_.load() >= 1) {
-      twist::ed::WakeOne(key);
+    if (contention_.load() == 0) {
+      locked_.store(State::Free);
+      return;
     }
+    locked_.store(State::Free);
+    twist::ed::WakeOne(key);
   }
 
   // BasicLockable
