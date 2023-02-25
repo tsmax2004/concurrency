@@ -29,6 +29,10 @@ class CondVar {
     twist::ed::WakeAll(twist::ed::PrepareWake(sleep_));
   }
 
+  ~CondVar() {
+    NotifyAll();
+  }
+
  private:
   twist::ed::stdlike::atomic<uint32_t> sleep_{0};
 };
