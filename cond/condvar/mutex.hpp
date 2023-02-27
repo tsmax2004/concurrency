@@ -16,14 +16,16 @@ class Mutex {
 
     while (locked_.exchange(State::Contention) != State::Free) {
       twist::ed::Wait(locked_, State::Contention);
+      if (locked_.load() == State::Free and
+          locked_.exchange(State::Locked) == State::Free) {
+        break;
+      }
     }
   }
 
   void Unlock() {
     auto key = twist::ed::PrepareWake(locked_);
-    auto old = locked_.exchange(State::Free);
-
-    if (old == State::Contention) {
+    if (locked_.exchange(State::Free) == State::Contention) {
       twist::ed::WakeOne(key);
     }
   }
@@ -47,7 +49,6 @@ class Mutex {
   };
 
   twist::ed::stdlike::atomic<uint32_t> locked_{0};
-  twist::ed::stdlike::atomic<uint32_t> counter_{0};
 };
 
 }  // namespace stdlike
