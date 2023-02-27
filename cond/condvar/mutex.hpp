@@ -16,10 +16,6 @@ class Mutex {
 
     while (locked_.exchange(State::Contention) != State::Free) {
       twist::ed::Wait(locked_, State::Contention);
-      if (locked_.load() == State::Free and
-          locked_.exchange(State::Locked) == State::Free) {
-        break;
-      }
     }
   }
 
