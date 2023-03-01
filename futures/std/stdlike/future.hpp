@@ -23,7 +23,7 @@ class Future {
   Future(Future&&) = default;
   Future& operator=(Future&&) = default;
 
-  // TODO: One-shot
+  // One-shot (although it can be multiple-shots)
   // Wait for result (value or exception)
   T Get() {
     std::unique_lock guard(buffer_ptr_->mutex);

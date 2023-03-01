@@ -24,14 +24,21 @@ class Promise {
   Promise(Promise&&) = default;
   Promise& operator=(Promise&&) = default;
 
-  // TODO: One-shot
+  // One-shot
   Future<T> MakeFuture() {
+    if (is_future_made_) {
+      throw std::logic_error(
+          "MakeFuture() has already been called on a promise with the same "
+          "shared state.");
+    }
+    is_future_made_ = true;
     return Future<T>(buffer_ptr_);
   }
 
-  // TODO: One-shot
+  // One-shot
   // Fulfill promise with value
   void SetValue(T value) {
+    CheckSetException();
     std::lock_guard guard(buffer_ptr_->mutex);
 
     buffer_ptr_->value = std::move(value);
@@ -39,9 +46,10 @@ class Promise {
     buffer_ptr_->is_ready_cv.notify_one();
   }
 
-  // TODO: One-shot
+  // One-shot
   // Fulfill promise with exception
   void SetException(std::exception_ptr exception) {
+    CheckSetException();
     std::lock_guard guard(buffer_ptr_->mutex);
 
     buffer_ptr_->value = std::move(exception);
@@ -51,7 +59,17 @@ class Promise {
   }
 
  private:
+  void CheckSetException() {
+    if (is_set_) {
+      throw std::logic_error(
+          "The shared state already stores a value or exception.");
+    }
+    is_set_ = true;
+  }
+
   BufferPtr buffer_ptr_;
+  bool is_future_made_{false};
+  bool is_set_{false};
 };
 
 }  // namespace stdlike
