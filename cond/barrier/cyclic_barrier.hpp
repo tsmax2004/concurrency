@@ -13,49 +13,23 @@ class CyclicBarrier {
 
   void ArriveAndWait() {
     std::unique_lock guard(mutex_);
+    auto old_epoch = epoch_;
 
-    if (is_even_) {
-      EvenParking(guard);
-    } else {
-      OddParking(guard);
+    if (++arrived_ == participants_) {
+      ++epoch_;
+      arrived_ = 0;
+      all_arrived_.notify_all();
+    }
+
+    while (old_epoch == epoch_) {
+      all_arrived_.wait(guard);
     }
   }
 
  private:
-  void EvenParking(std::unique_lock<twist::ed::stdlike::mutex>& guard) {
-    ++arrived_even_;
-    if (arrived_even_ == participants_) {
-      AllArrived();
-    }
-    while (arrived_even_ < participants_) {
-      all_arrived_.wait(guard);
-    }
-  }
-
-  void OddParking(std::unique_lock<twist::ed::stdlike::mutex>& guard) {
-    ++arrived_odd_;
-    if (arrived_odd_ == participants_) {
-      AllArrived();
-    }
-    while (arrived_odd_ < participants_) {
-      all_arrived_.wait(guard);
-    }
-  }
-
-  void AllArrived() {
-    is_even_ = not is_even_;
-    if (is_even_) {
-      arrived_even_ = 0;
-    } else {
-      arrived_odd_ = 0;
-    }
-    all_arrived_.notify_all();
-  }
-
   size_t participants_;
-  size_t arrived_even_{0};
-  size_t arrived_odd_{0};
-  bool is_even_{true};
+  size_t arrived_{0};
+  size_t epoch_{0};
 
   twist::ed::stdlike::mutex mutex_;
   twist::ed::stdlike::condition_variable all_arrived_;
