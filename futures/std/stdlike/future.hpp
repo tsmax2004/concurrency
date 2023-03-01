@@ -32,7 +32,7 @@ class Future {
     }
 
     if (std::holds_alternative<T>(buffer_ptr_->value)) {
-      return std::get<T>(buffer_ptr_->value);
+      return std::move(std::get<T>(buffer_ptr_->value));
     }
     auto exception = std::get<std::exception_ptr>(buffer_ptr_->value);
     std::rethrow_exception(exception);
