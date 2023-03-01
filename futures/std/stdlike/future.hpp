@@ -31,11 +31,10 @@ class Future {
       buffer_ptr_->is_ready_cv.wait(guard);
     }
 
-    if (std::holds_alternative<T>(buffer_ptr_->value)) {
-      return std::move(std::get<T>(buffer_ptr_->value));
+    if (buffer_ptr_->is_exception) {
+      std::rethrow_exception(std::get<std::exception_ptr>(buffer_ptr_->value));
     }
-    auto exception = std::get<std::exception_ptr>(buffer_ptr_->value);
-    std::rethrow_exception(exception);
+    return std::move(std::get<T>(buffer_ptr_->value));
   }
 
  private:

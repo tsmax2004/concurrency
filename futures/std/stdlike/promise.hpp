@@ -46,6 +46,7 @@ class Promise {
 
     buffer_ptr_->value = std::move(exception);
     buffer_ptr_->is_ready = true;
+    buffer_ptr_->is_exception = true;
     buffer_ptr_->is_ready_cv.notify_one();
   }
 
