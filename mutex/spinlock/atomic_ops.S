@@ -13,12 +13,10 @@ FUNCTION_NAME(AtomicLoad):
     retq
 
 FUNCTION_NAME(AtomicStore):
-    movq  %rsi, (%rdi)
+    movq %rsi, (%rdi)
     retq
 
 FUNCTION_NAME(AtomicExchange):
-    movq    (%rdi), %rax  # Load
-loop:
-    lock cmpxchg %rsi, (%rdi)  # TryStore
-    jne     loop
+    xchg (%rdi), %rsi  # Excnahge
+    movq %rsi, %rax
     retq
