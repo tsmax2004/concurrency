@@ -43,7 +43,7 @@ void ThreadPool::Stop() {
   workers_wg_.Wait();
 
   for (size_t i = 0; i < num_workers_; ++i) {
-    workers_[i].detach();
+    workers_[i].join();
   }
 }
 
