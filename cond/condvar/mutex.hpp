@@ -10,18 +10,18 @@ namespace stdlike {
 class Mutex {
  public:
   void Lock() {
-    if (locked_.exchange(State::Locked) == State::Free) {
+    if (state_.exchange(State::Locked) == State::Free) {
       return;
     }
 
-    while (locked_.exchange(State::Contention) != State::Free) {
-      twist::ed::Wait(locked_, State::Contention);
+    while (state_.exchange(State::Contention) != State::Free) {
+      twist::ed::Wait(state_, State::Contention);
     }
   }
 
   void Unlock() {
-    auto key = twist::ed::PrepareWake(locked_);
-    if (locked_.exchange(State::Free) == State::Contention) {
+    auto key = twist::ed::PrepareWake(state_);
+    if (state_.exchange(State::Free) == State::Contention) {
       twist::ed::WakeOne(key);
     }
   }
@@ -44,7 +44,7 @@ class Mutex {
     Contention = 2,
   };
 
-  twist::ed::stdlike::atomic<uint32_t> locked_{0};
+  twist::ed::stdlike::atomic<uint32_t> state_{0};
 };
 
 }  // namespace stdlike
