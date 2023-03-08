@@ -21,8 +21,8 @@ class TicketLock {
 
   bool TryLock() {
     Ticket owner_ticket_now = owner_ticket_.load();
-    return next_free_ticket_.compare_exchange_weak(
-        owner_ticket_now, next_free_ticket_.load() + 1);
+    return next_free_ticket_.compare_exchange_weak(owner_ticket_now,
+                                                   owner_ticket_now);
   }
 
   // Do not change this method
