@@ -52,8 +52,7 @@ class ThreadPool {
   std::vector<twist::ed::stdlike::thread> workers_;
 
   UnboundedBlockingQueue<Task> task_queue_;
-  WaitGroup tasks_wg_;    // tasks in queue counter
-  WaitGroup workers_wg_;  // running workers
+  WaitGroup tasks_wg_;  // tasks in queue counter
   twist::ed::stdlike::atomic<uint32_t> is_stopped_{0};
 };
 

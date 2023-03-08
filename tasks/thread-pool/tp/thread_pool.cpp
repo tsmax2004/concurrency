@@ -11,8 +11,6 @@ ThreadPool::ThreadPool(size_t num_workers)
 }
 
 void ThreadPool::Start() {
-  workers_wg_.Add(num_workers_);
-
   for (size_t i = 0; i < num_workers_; ++i) {
     workers_.emplace_back([this] {
       Worker();
@@ -40,7 +38,6 @@ void ThreadPool::WaitIdle() {
 void ThreadPool::Stop() {
   is_stopped_.store(1);
   task_queue_.Close();
-  workers_wg_.Wait();
 
   for (size_t i = 0; i < num_workers_; ++i) {
     workers_[i].join();
@@ -59,8 +56,6 @@ void ThreadPool::Worker() {
     task.value()();
     tasks_wg_.Done();
   }
-
-  workers_wg_.Done();
 }
 
 }  // namespace tp
