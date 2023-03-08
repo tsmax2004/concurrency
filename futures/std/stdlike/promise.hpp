@@ -9,11 +9,13 @@ namespace stdlike {
 
 template <typename T>
 class Promise {
-  using BufferPtr = std::shared_ptr<detail::Buffer<T>>;
+  using Buffer = detail::Buffer<T>;
+  using BufferPtr = std::shared_ptr<Buffer>;
+  using BufferState = detail::BuffetState;
 
  public:
   Promise() {
-    buffer_ptr_ = std::make_shared<detail::Buffer<T>>();
+    buffer_ptr_ = std::make_shared<Buffer>();
   }
 
   // Non-copyable
@@ -42,7 +44,7 @@ class Promise {
     std::lock_guard guard(buffer_ptr_->mutex);
 
     buffer_ptr_->value = std::move(value);
-    buffer_ptr_->is_ready = true;
+    buffer_ptr_->state_ = BufferState::OBJECT;
     buffer_ptr_->is_ready_cv.notify_one();
   }
 
@@ -53,8 +55,7 @@ class Promise {
     std::lock_guard guard(buffer_ptr_->mutex);
 
     buffer_ptr_->value = std::move(exception);
-    buffer_ptr_->is_ready = true;
-    buffer_ptr_->is_exception = true;
+    buffer_ptr_->state_ = BufferState::EXCEPTION;
     buffer_ptr_->is_ready_cv.notify_one();
   }
 

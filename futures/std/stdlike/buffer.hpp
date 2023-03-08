@@ -7,6 +7,12 @@
 
 namespace stdlike::detail {
 
+enum BuffetState : uint32_t {
+  NOT_READY = 0,
+  OBJECT = 1,
+  EXCEPTION = 2,
+};
+
 template <typename T>
 struct Buffer {
   Buffer() = default;
@@ -14,8 +20,7 @@ struct Buffer {
   twist::ed::stdlike::mutex mutex;
   twist::ed::stdlike::condition_variable is_ready_cv;
   std::variant<std::exception_ptr, T> value;
-  bool is_ready{false};
-  bool is_exception{false};
+  BuffetState state_{0};
 };
 
 template <>
@@ -25,8 +30,7 @@ struct Buffer<std::exception_ptr> {
   twist::ed::stdlike::mutex mutex;
   twist::ed::stdlike::condition_variable is_ready_cv;
   std::variant<std::exception_ptr> value;
-  bool is_ready{false};
-  bool is_exception{false};
+  BuffetState state_{0};
 };
 
 }  // namespace stdlike::detail
