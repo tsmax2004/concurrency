@@ -17,13 +17,13 @@ Coroutine::Coroutine(Routine routine)
 }
 
 void Coroutine::Resume() {
-  prev_coroutine = current_coroutine;
+  prev_coroutine_ = current_coroutine;
   current_coroutine = this;
 
   state_ = CoroutineState::RUNNING;
 
   main_context_.SwitchTo(coroutine_trampoline_.context_);
-  current_coroutine = prev_coroutine;
+  current_coroutine = prev_coroutine_;
 
   Dispatch();
 }

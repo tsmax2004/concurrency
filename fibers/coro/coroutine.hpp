@@ -64,5 +64,5 @@ class Coroutine {
   CoroutineState state_;
   std::exception_ptr eptr_;
 
-  Coroutine* prev_coroutine;
+  Coroutine* prev_coroutine_;
 };
