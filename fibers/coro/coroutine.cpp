@@ -75,7 +75,7 @@ Coroutine::CoroutineTrampoline::CoroutineTrampoline(Routine routine)
 }
 
 void Coroutine::CoroutineTrampoline::AllocateStack() {
-  routine_stack_.AllocateBytes(kDefaultStackSize);
+  routine_stack_ = sure::Stack::AllocateBytes(kDefaultStackSize);
 }
 
 void Coroutine::CoroutineTrampoline::ReleaseStack() {
