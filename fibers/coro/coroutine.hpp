@@ -54,6 +54,8 @@ class Coroutine {
 
   void SwitchToMain();
 
+  void ExitToMain();
+
   static void RethrowException(std::exception_ptr);
 
   static void Terminate();

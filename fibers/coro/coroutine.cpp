@@ -61,15 +61,19 @@ void Coroutine::SwitchToMain() {
   coroutine_trampoline_.context_.SwitchTo(main_context_);
 }
 
+void Coroutine::ExitToMain() {
+  coroutine_trampoline_.context_.ExitTo(main_context_);
+}
+
 void Coroutine::RethrowException(std::exception_ptr eptr) {
   current_coroutine->state_ = CoroutineState::EXCEPTION;
   current_coroutine->eptr_ = eptr;
-  current_coroutine->SwitchToMain();
+  current_coroutine->ExitToMain();
 }
 
 void Coroutine::Terminate() {
   current_coroutine->state_ = CoroutineState::TERMINATED;
-  current_coroutine->SwitchToMain();
+  current_coroutine->ExitToMain();
 }
 
 Coroutine::CoroutineTrampoline::CoroutineTrampoline(Routine routine)
