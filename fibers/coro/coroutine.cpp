@@ -17,13 +17,15 @@ Coroutine::Coroutine(Routine routine)
 }
 
 void Coroutine::Resume() {
+  prev_coroutine = current_coroutine;
   current_coroutine = this;
+
   state_ = CoroutineState::RUNNING;
 
   main_context_.SwitchTo(coroutine_trampoline_.context_);
-  Dispatch();
+  current_coroutine = prev_coroutine;
 
-  current_coroutine = nullptr;
+  Dispatch();
 }
 
 void Coroutine::Suspend() {
@@ -38,6 +40,8 @@ bool Coroutine::IsCompleted() const {
 void Coroutine::Dispatch() {
   switch (state_) {
     case CoroutineState::EXCEPTION:
+      state_ = CoroutineState::TERMINATED;
+      coroutine_trampoline_.ReleaseStack();
       std::rethrow_exception(eptr_);
 
     case CoroutineState::TERMINATED:
