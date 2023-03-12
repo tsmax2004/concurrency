@@ -43,8 +43,6 @@ class Fiber {
   coro::Coroutine coroutine_;
 
   Routine suspended_routine_;
-
-  //  FibetState state_;
 };
 
 }  // namespace exe::fibers
