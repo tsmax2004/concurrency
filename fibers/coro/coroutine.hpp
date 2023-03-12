@@ -34,7 +34,7 @@ class Coroutine {
     friend Coroutine;
 
    private:
-    Callee(Routine routine);
+    explicit Callee(Routine routine);
 
     void AllocateStack();
     void ReleaseStack();
