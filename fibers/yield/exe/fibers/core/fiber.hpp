@@ -24,7 +24,7 @@ class Fiber {
 
  private:
   Fiber(Scheduler&, Routine);
-  Fiber(Routine);
+  explicit Fiber(Routine);
 
   Scheduler& scheduler_;
   coro::Coroutine coroutine_;

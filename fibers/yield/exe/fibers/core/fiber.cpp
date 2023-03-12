@@ -25,7 +25,7 @@ void Fiber::Run() {
 }
 
 Fiber* Fiber::Self() {
-  return nullptr;  // Not implemented
+  return current_fiber;
 }
 
 Fiber::Fiber(Scheduler& scheduler, Routine routine)
@@ -34,7 +34,7 @@ Fiber::Fiber(Scheduler& scheduler, Routine routine)
 }
 
 Fiber::Fiber(Routine routine)
-    : scheduler_(current_fiber->scheduler_),
+    : scheduler_(Self()->scheduler_),
       coroutine_(std::move(routine)) {
 }
 
