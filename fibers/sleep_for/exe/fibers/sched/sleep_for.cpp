@@ -9,10 +9,9 @@ namespace exe::fibers {
 void SleepFor(Millis delay) {
   auto fiber = Fiber::Self();
 
+  asio::steady_timer timer{fiber->scheduler_};
+  timer.expires_after(delay);
   fiber->SetSuspendedRoutine([&] {
-    asio::steady_timer timer{fiber->scheduler_};
-    timer.expires_after(delay);
-
     timer.async_wait([&](std::error_code) {
       fiber->Schedule();
     });
