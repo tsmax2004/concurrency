@@ -42,7 +42,7 @@ void Coroutine::Dispatch() {
     case CoroutineState::EXCEPTION:
       state_ = CoroutineState::TERMINATED;
       coroutine_trampoline_.ReleaseStack();
-      std::rethrow_exception(eptr_);
+      std::rethrow_exception(std::move(eptr_));
 
     case CoroutineState::TERMINATED:
       coroutine_trampoline_.ReleaseStack();
@@ -67,7 +67,7 @@ void Coroutine::ExitToMain() {
 
 void Coroutine::RethrowException(std::exception_ptr eptr) {
   current_coroutine->state_ = CoroutineState::EXCEPTION;
-  current_coroutine->eptr_ = eptr;
+  current_coroutine->eptr_ = std::move(eptr);
   current_coroutine->ExitToMain();
 }
 
@@ -95,13 +95,10 @@ void Coroutine::CoroutineTrampoline::SetupContext() {
 }
 
 void Coroutine::CoroutineTrampoline::Run() noexcept {
-  std::exception_ptr eptr;
-
   try {
     routine_();
   } catch (...) {
-    eptr = std::current_exception();
-    Coroutine::RethrowException(eptr);
+    Coroutine::RethrowException(std::move(std::current_exception()));
   }
 
   Coroutine::Terminate();
