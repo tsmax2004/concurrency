@@ -22,51 +22,44 @@ class Coroutine {
 
   bool IsCompleted() const;
 
-  ~Coroutine();
-
  private:
   enum class CoroutineState {
-    NOT_STARTED,
-    RUNNING,
-    SUSPENDED,
-    EXCEPTION,
-    TERMINATED,
+    Starting,
+    Running,
+    Suspended,
+    Terminated,
   };
 
-  class CoroutineTrampoline : private sure::ITrampoline {
+  class Callee : sure::ITrampoline {
     friend Coroutine;
 
    private:
-    explicit CoroutineTrampoline(Routine routine);
+    Callee(Routine routine);
 
     void AllocateStack();
-
     void ReleaseStack();
-
     void SetupContext();
 
-    void Run() noexcept override;
+    [[noreturn]] void Run() noexcept override;
 
     Routine routine_;
-    sure::Stack routine_stack_;
+    sure::Stack stack_;
     sure::ExecutionContext context_;
   };
 
+  static void Terminate();
+  static void SetException(std::exception_ptr);
+
+  void SwitchToCallee();
+  void SwitchToCaller();
+  void ExitToCaller();
+
   void Dispatch();
 
-  void SwitchToMain();
+  Callee callee_;
+  sure::ExecutionContext caller_context_;
 
-  void ExitToMain();
-
-  static void RethrowException(std::exception_ptr);
-
-  static void Terminate();
-
-  sure::ExecutionContext main_context_;
-  CoroutineTrampoline coroutine_trampoline_;
-
-  CoroutineState state_;
   std::exception_ptr eptr_;
 
-  Coroutine* prev_coroutine_;
+  CoroutineState state_;
 };

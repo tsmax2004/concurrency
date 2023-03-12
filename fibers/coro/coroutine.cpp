@@ -5,107 +5,101 @@
 #include <wheels/core/assert.hpp>
 #include <wheels/core/compiler.hpp>
 
-#include <wheels/core/size_literals.hpp>
-
-// using namespace wheels::size_literals;
 static const size_t kDefaultStackSize = 64 * 1024;
 
 twist::ed::ThreadLocalPtr<Coroutine> current_coroutine;
 
 Coroutine::Coroutine(Routine routine)
-    : coroutine_trampoline_(std::move(routine)) {
+    : callee_(std::move(routine)) {
 }
 
 void Coroutine::Resume() {
-  prev_coroutine_ = current_coroutine;
+  Coroutine* previous_coroutine = current_coroutine;
   current_coroutine = this;
+  state_ = CoroutineState::Running;
 
-  state_ = CoroutineState::RUNNING;
+  SwitchToCallee();
 
-  main_context_.SwitchTo(coroutine_trampoline_.context_);
-  current_coroutine = prev_coroutine_;
+  current_coroutine = previous_coroutine;
 
   Dispatch();
 }
 
 void Coroutine::Suspend() {
-  current_coroutine->state_ = CoroutineState::SUSPENDED;
-  current_coroutine->SwitchToMain();
+  current_coroutine->state_ = CoroutineState::Suspended;
+  current_coroutine->SwitchToCaller();
 }
 
 bool Coroutine::IsCompleted() const {
-  return state_ == CoroutineState::TERMINATED;
+  return state_ == CoroutineState::Terminated;
 }
 
-Coroutine::~Coroutine() {
-  if (eptr_) {
-    eptr_.std::exception_ptr::~exception_ptr();
-  }
+void Coroutine::Terminate() {
+  current_coroutine->state_ = CoroutineState::Terminated;
+  current_coroutine->ExitToCaller();
+}
+
+void Coroutine::SetException(std::exception_ptr eptr) {
+  current_coroutine->eptr_ = std::move(eptr);
+}
+
+void Coroutine::SwitchToCallee() {
+  caller_context_.SwitchTo(callee_.context_);
+}
+
+void Coroutine::SwitchToCaller() {
+  callee_.context_.SwitchTo(caller_context_);
+}
+
+void Coroutine::ExitToCaller() {
+  callee_.context_.ExitTo(caller_context_);
 }
 
 void Coroutine::Dispatch() {
   switch (state_) {
-    case CoroutineState::EXCEPTION:
-      state_ = CoroutineState::TERMINATED;
-      coroutine_trampoline_.ReleaseStack();
-      std::rethrow_exception(std::move(eptr_));
-
-    case CoroutineState::TERMINATED:
-      coroutine_trampoline_.ReleaseStack();
+    case CoroutineState::Suspended:
       break;
-
-    case CoroutineState::SUSPENDED:
+    case CoroutineState::Terminated:
+      callee_.ReleaseStack();
       break;
-
     default:
-      WHEELS_PANIC("Unexpected coroutine state");
+      // Unexpected coroutine state
       break;
+  }
+
+  if (eptr_) {
+    auto tmp_eptr = std::move(eptr_);
+    eptr_ = nullptr;
+    std::rethrow_exception(std::move(tmp_eptr));
   }
 }
 
-void Coroutine::SwitchToMain() {
-  coroutine_trampoline_.context_.SwitchTo(main_context_);
-}
-
-void Coroutine::ExitToMain() {
-  coroutine_trampoline_.context_.ExitTo(main_context_);
-}
-
-void Coroutine::RethrowException(std::exception_ptr eptr) {
-  current_coroutine->state_ = CoroutineState::EXCEPTION;
-  current_coroutine->eptr_ = std::move(eptr);
-  current_coroutine->ExitToMain();
-}
-
-void Coroutine::Terminate() {
-  current_coroutine->state_ = CoroutineState::TERMINATED;
-  current_coroutine->ExitToMain();
-}
-
-Coroutine::CoroutineTrampoline::CoroutineTrampoline(Routine routine)
+Coroutine::Callee::Callee(Routine routine)
     : routine_(std::move(routine)) {
   AllocateStack();
   SetupContext();
 }
 
-void Coroutine::CoroutineTrampoline::AllocateStack() {
-  routine_stack_ = sure::Stack::AllocateBytes(kDefaultStackSize);
+void Coroutine::Callee::AllocateStack() {
+  stack_ = sure::Stack::AllocateBytes(kDefaultStackSize);
 }
 
-void Coroutine::CoroutineTrampoline::ReleaseStack() {
-  routine_stack_.Release();
+void Coroutine::Callee::ReleaseStack() {
+  stack_.Release();
 }
 
-void Coroutine::CoroutineTrampoline::SetupContext() {
-  context_.Setup(routine_stack_.MutView(), this);
+void Coroutine::Callee::SetupContext() {
+  context_.Setup(stack_.MutView(), this);
 }
 
-void Coroutine::CoroutineTrampoline::Run() noexcept {
+void Coroutine::Callee::Run() noexcept {
   try {
     routine_();
   } catch (...) {
-    Coroutine::RethrowException(std::move(std::current_exception()));
+    Coroutine::SetException(std::move(std::current_exception()));
   }
 
   Coroutine::Terminate();
+
+  WHEELS_UNREACHABLE();
 }
