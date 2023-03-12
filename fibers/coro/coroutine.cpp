@@ -37,6 +37,12 @@ bool Coroutine::IsCompleted() const {
   return state_ == CoroutineState::TERMINATED;
 }
 
+Coroutine::~Coroutine() {
+  if (eptr_) {
+    eptr_.std::exception_ptr::~exception_ptr();
+  }
+}
+
 void Coroutine::Dispatch() {
   switch (state_) {
     case CoroutineState::EXCEPTION:

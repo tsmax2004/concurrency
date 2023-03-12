@@ -22,6 +22,8 @@ class Coroutine {
 
   bool IsCompleted() const;
 
+  ~Coroutine();
+
  private:
   enum class CoroutineState {
     NOT_STARTED,
