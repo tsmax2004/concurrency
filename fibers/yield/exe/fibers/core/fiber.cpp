@@ -11,6 +11,8 @@ void Fiber::Schedule() {
     Run();
     if (!coroutine_.IsCompleted()) {
       Schedule();
+    } else {
+      delete this;
     }
   });
 }
