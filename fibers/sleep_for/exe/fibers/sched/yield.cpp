@@ -6,7 +6,10 @@
 namespace exe::fibers {
 
 void Yield() {
-  Fiber::Self()->Schedule();
+  auto fiber = Fiber::Self();
+  fiber->SetSuspendedRoutine([&] {
+    fiber->Schedule();
+  });
   coro::Coroutine::Suspend();
 }
 
