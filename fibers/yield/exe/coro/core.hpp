@@ -6,8 +6,23 @@
 #include <function2/function2.hpp>
 
 #include <exception>
+#include <memory>
 
 namespace exe::coro {
+
+class CoroutineCore {
+ public:
+  CoroutineCore(wheels::MutableMemView /* stack view*/,
+                sure::ITrampoline* /* runnable */);
+
+  sure::ExecutionContext& GetContext();
+
+ private:
+  void SetupContext(wheels::MutableMemView);
+
+  sure::ExecutionContext context_;
+  sure::ITrampoline* runnable_;
+};
 
 class Coroutine {
  public:
@@ -30,25 +45,24 @@ class Coroutine {
     Terminated,
   };
 
-  class Callee : sure::ITrampoline {
+  class IRunnable : public sure::ITrampoline {
     friend Coroutine;
 
    private:
-    explicit Callee(Routine routine);
-
-    void AllocateStack();
-    void ReleaseStack();
-    void SetupContext();
-
+    explicit IRunnable(Routine);
     [[noreturn]] void Run() noexcept override;
 
     Routine routine_;
-    sure::Stack stack_;
-    sure::ExecutionContext context_;
   };
 
   static void Terminate();
   static void SetException(std::exception_ptr);
+
+  void CreateCore();
+  void DestroyCore();
+
+  sure::Stack AllocateStack();
+  void ReleaseStack(sure::Stack);
 
   void SwitchToCallee();
   void SwitchToCaller();
@@ -56,11 +70,13 @@ class Coroutine {
 
   void Dispatch();
 
-  Callee callee_;
+  sure::Stack stack_;
+  IRunnable runnable_;
+  std::shared_ptr<CoroutineCore> core_;
+
   sure::ExecutionContext caller_context_;
 
   std::exception_ptr eptr_;
-
   CoroutineState state_;
 };
 
