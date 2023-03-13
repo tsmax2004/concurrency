@@ -28,12 +28,6 @@ class Fiber {
   static Fiber* Self();
 
  private:
-  //  enum class FibetState {
-  //    Starting,
-  //    Running,
-  //    Suspended,
-  //  };
-
   Fiber(Scheduler&, Routine);
 
   void SetSuspendedRoutine(Routine);
