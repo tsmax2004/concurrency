@@ -19,7 +19,7 @@ void ThreadPool::Start() {
 }
 
 ThreadPool::~ThreadPool() {
-  assert(is_stopped_);
+  WHEELS_ASSERT(is_stopped_, "Thread pool wasn't stopped");
 }
 
 void ThreadPool::Submit(Task task) {
@@ -39,8 +39,8 @@ void ThreadPool::Stop() {
   is_stopped_.store(1);
   task_queue_.Close();
 
-  for (size_t i = 0; i < num_workers_; ++i) {
-    workers_[i].join();
+  for (auto& worker : workers_) {
+    worker.join();
   }
 }
 
@@ -48,13 +48,10 @@ void ThreadPool::Worker() {
   pool = this;
 
   while (is_stopped_.load() == 0) {
-    auto task = task_queue_.Take();
-    if (!task.has_value()) {
-      break;
+    if (auto task = task_queue_.Take()) {
+      task.value()();
+      tasks_wg_.Done();
     }
-
-    task.value()();
-    tasks_wg_.Done();
   }
 }
 
