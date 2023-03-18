@@ -34,8 +34,8 @@ class QueueSpinLock {
 
    private:
     QueueSpinLock& host_;
-    twist::ed::stdlike::atomic<Guard*> next_;
-    twist::ed::stdlike::atomic<bool> is_owner_;
+    twist::ed::stdlike::atomic<Guard*> next_{nullptr};
+    twist::ed::stdlike::atomic<bool> is_owner_{false};
   };
 
  private:
@@ -66,5 +66,5 @@ class QueueSpinLock {
   }
 
  private:
-  twist::ed::stdlike::atomic<Guard*> tail_;
+  twist::ed::stdlike::atomic<Guard*> tail_{nullptr};
 };
