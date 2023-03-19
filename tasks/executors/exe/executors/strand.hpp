@@ -1,6 +1,7 @@
 #pragma once
 
 #include <queue>
+#include <memory>
 
 #include <exe/executors/executor.hpp>
 #include <exe/threads/spinlock.hpp>
@@ -25,14 +26,21 @@ class Strand : public IExecutor {
   void Submit(Task cs) override;
 
  private:
+  enum class StrandState {
+    Chilling = 0,  // nobody run, no tasks
+    Running = 1,   // strand is running, no new tasks
+    Waiting = 2,   // strand is running, there are new tasks
+  };
+
   void Submit();
   void Submit(threads::QueueSpinLock::Guard&);
-  std::vector<Task> GetBatch();
+
+  IExecutor& underlying_executor_;
 
   threads::QueueSpinLock spin_lock_;
   std::queue<Task> task_queue_;
-  IExecutor& underlying_executor_;
-  bool is_submitted_{false};
+
+  std::shared_ptr<twist::ed::stdlike::atomic<StrandState>> state_;
 };
 
 }  // namespace exe::executors
