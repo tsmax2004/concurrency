@@ -12,24 +12,17 @@ Strand::Strand(IExecutor& underlying)
 }
 
 void Strand::Submit(Task task) {
-  threads::QueueSpinLock::Guard guard(spin_lock_);
+  PushTask(std::move(task));
 
-  task_queue_.push(std::move(task));
   if (state_->exchange(StrandState::Waiting) == StrandState::Chilling) {
-    Submit(guard);
+    Submit();
   }
 }
 
 void Strand::Submit() {
-  assert(alive);
-  threads::QueueSpinLock::Guard guard(spin_lock_);
-  Submit(guard);
-}
-
-void Strand::Submit(threads::QueueSpinLock::Guard&) {
   state_->store(StrandState::Running);
   underlying_executor_.Submit(
-      [this, state = state_, batch = std::move(task_queue_)]() mutable {
+      [this, state = state_, batch = GetBatch()]() mutable {
         while (!batch.empty()) {
           batch.front()();
           batch.pop();
@@ -42,7 +35,14 @@ void Strand::Submit(threads::QueueSpinLock::Guard&) {
       });
 }
 
-Strand::~Strand() {
-  alive = false;
+void Strand::PushTask(Task task) {
+  threads::QueueSpinLock::Guard guard(spin_lock_);
+  task_queue_.push(std::move(task));
 }
+
+std::queue<Task> Strand::GetBatch() {
+  threads::QueueSpinLock::Guard guard(spin_lock_);
+  return std::move(task_queue_);
+}
+
 }  // namespace exe::executors

@@ -25,8 +25,6 @@ class Strand : public IExecutor {
   // IExecutor
   void Submit(Task cs) override;
 
-  ~Strand();
-
  private:
   enum class StrandState {
     Chilling = 0,  // nobody run, no tasks
@@ -35,7 +33,8 @@ class Strand : public IExecutor {
   };
 
   void Submit();
-  void Submit(threads::QueueSpinLock::Guard&);
+  void PushTask(Task task);
+  std::queue<Task> GetBatch();
 
   IExecutor& underlying_executor_;
 
