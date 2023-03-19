@@ -34,34 +34,35 @@ class QueueSpinLock {
 
    private:
     QueueSpinLock& host_;
+
     twist::ed::stdlike::atomic<Guard*> next_{nullptr};
     twist::ed::stdlike::atomic<bool> is_owner_{false};
   };
 
  private:
   void Acquire(Guard* waiter) {
-    Guard* null1 = nullptr;
-    Guard* null2 = nullptr;
-
-    while (!tail_.compare_exchange_strong(null1, waiter) ||
-           !tail_.load()->next_.compare_exchange_strong(null2, waiter)) {
-      null1 = nullptr;
-      null2 = nullptr;
+    auto prev_tail = tail_.exchange(waiter);
+    if (prev_tail == nullptr) {
+      return;
     }
-    tail_.exchange(waiter);
+    prev_tail->next_.store(waiter);
 
     twist::ed::SpinWait spin_wait;
-    while (waiter->is_owner_.load()) {
+    while (!waiter->is_owner_.load()) {
       spin_wait();
     }
   }
 
   void Release(Guard* owner) {
-    if (tail_.compare_exchange_strong(owner, nullptr) ||
-        owner->next_.load() == nullptr) {
+    auto tmp_owner = owner;
+    if (tail_.compare_exchange_strong(tmp_owner, nullptr)) {
       return;
     }
 
+    twist::ed::SpinWait spin_wait;
+    while (owner->next_.load() == nullptr) {
+      spin_wait();
+    }
     owner->next_.load()->is_owner_.store(true);
   }
 
