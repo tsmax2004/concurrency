@@ -32,7 +32,7 @@ void Strand::Submit(threads::QueueSpinLock::Guard&) {
     }
 
     auto expired = StrandState::Running;
-    if (!state_->compare_exchange_strong(expired, StrandState::Chilling)) {
+    if (!state->compare_exchange_strong(expired, StrandState::Chilling)) {
       Submit();
     }
   });
