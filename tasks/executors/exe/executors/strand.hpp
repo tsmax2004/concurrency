@@ -25,6 +25,8 @@ class Strand : public IExecutor {
   // IExecutor
   void Submit(Task cs) override;
 
+  ~Strand();
+
  private:
   enum class StrandState {
     Chilling = 0,  // nobody run, no tasks
