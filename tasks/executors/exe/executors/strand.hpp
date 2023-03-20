@@ -11,6 +11,8 @@ namespace exe::executors {
 // Strand / serial executor / asynchronous mutex
 
 class Strand : public IExecutor {
+  using LockGuard = threads::QueueSpinLock::Guard;
+
  public:
   explicit Strand(IExecutor& underlying);
 
@@ -33,7 +35,6 @@ class Strand : public IExecutor {
   };
 
   void Submit();
-  void PushTask(Task task);
   std::queue<Task> GetBatch();
 
   IExecutor& underlying_executor_;
