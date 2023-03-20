@@ -5,6 +5,7 @@
 
 #include <exe/executors/executor.hpp>
 #include <exe/threads/spinlock.hpp>
+#include <exe/executors/queue.hpp>
 
 namespace exe::executors {
 
@@ -30,18 +31,14 @@ class Strand : public IExecutor {
  private:
   enum class StrandState {
     Chilling = 0,  // nobody run, no tasks
-    Running = 1,   // strand is running, no new tasks
-    Waiting = 2,   // strand is running, there are new tasks
+    Running = 1,   // strand is running
+    Waiting = 2,   // there are not-submitted tasks
   };
 
   void Submit();
-  std::queue<Task> GetBatch();
 
   IExecutor& underlying_executor_;
-
-  threads::QueueSpinLock spin_lock_;
-  std::queue<Task> task_queue_;
-
+  std::shared_ptr<StrandLockFreeQueue<Task>> task_queue_;
   std::shared_ptr<twist::ed::stdlike::atomic<StrandState>> state_;
 };
 
