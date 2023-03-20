@@ -4,7 +4,7 @@ namespace exe::executors {
 
 Strand::Strand(IExecutor& underlying)
     : underlying_executor_(underlying) {
-  submitted_cnt_ = std::make_shared<twist::ed::stdlike::atomic<size_t>>(0);
+  submitted_cnt_ = std::make_shared<Counter>(0);
 }
 
 void Strand::Submit(Task task) {

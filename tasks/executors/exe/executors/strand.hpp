@@ -12,7 +12,9 @@ namespace exe::executors {
 // Strand / serial executor / asynchronous mutex
 
 class Strand : public IExecutor {
-  using LockGuard = threads::QueueSpinLock::Guard;
+  using Counter = twist::ed::stdlike::atomic<size_t>;
+  using CounterPtr = std::shared_ptr<Counter>;
+  using TaskStack = LockFreePushStack<Task>;
 
  public:
   explicit Strand(IExecutor& underlying);
@@ -32,9 +34,8 @@ class Strand : public IExecutor {
   void Submit();
 
   IExecutor& underlying_executor_;
-  LockFreePushStack<Task> task_stack_;
-
-  std::shared_ptr<twist::ed::stdlike::atomic<size_t>> submitted_cnt_;
+  TaskStack task_stack_;
+  CounterPtr submitted_cnt_;
 };
 
 }  // namespace exe::executors
