@@ -29,17 +29,13 @@ class Strand : public IExecutor {
   void Submit(Task cs) override;
 
  private:
-  enum class StrandState {
-    Chilling = 0,  // nobody run, no tasks
-    Running = 1,   // strand is running
-    Waiting = 2,   // there are not-submitted tasks
-  };
-
   void Submit();
 
   IExecutor& underlying_executor_;
-  std::shared_ptr<LockFreePushStack<Task>> task_stack_;
-  std::shared_ptr<twist::ed::stdlike::atomic<StrandState>> state_;
+  LockFreePushStack<Task> task_stack_;
+
+  std::shared_ptr<twist::ed::stdlike::atomic<size_t>> tasks_cnt_;
+  std::shared_ptr<twist::ed::stdlike::atomic<size_t>> next_task_num_;
 };
 
 }  // namespace exe::executors

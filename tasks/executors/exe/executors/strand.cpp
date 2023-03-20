@@ -4,34 +4,28 @@ namespace exe::executors {
 
 Strand::Strand(IExecutor& underlying)
     : underlying_executor_(underlying) {
-  state_ = std::make_shared<twist::ed::stdlike::atomic<StrandState>>(
-      StrandState::Chilling);
-  task_stack_ = std::make_shared<LockFreePushStack<Task>>();
+  tasks_cnt_ = std::make_shared<twist::ed::stdlike::atomic<size_t>>(0);
+  next_task_num_ = std::make_shared<twist::ed::stdlike::atomic<size_t>>(0);
 }
 
 void Strand::Submit(Task task) {
-  bool is_chilling =
-      state_->exchange(StrandState::Running) == StrandState::Chilling;
-  task_stack_->Push(std::move(task));
-
-  if (is_chilling ||
-      state_->exchange(StrandState::Waiting) == StrandState::Chilling) {
+  task_stack_.Push(std::move(task));
+  if (next_task_num_->fetch_add(1) == tasks_cnt_->load()) {
     Submit();
   }
 }
 
 void Strand::Submit() {
-  state_->store(StrandState::Running);
   underlying_executor_.Submit(
-      [this, state = state_,
-       task_stack = task_stack_->GetReversedStack()]() mutable {
+      [this, tasks_cnt = tasks_cnt_, next_task_num = next_task_num_,
+       task_stack = task_stack_.GetReversedStack()]() mutable {
         while (!task_stack.empty()) {
           task_stack.top()();
           task_stack.pop();
+          tasks_cnt_->fetch_add(1);
         }
 
-        auto expired = StrandState::Running;
-        if (!state->compare_exchange_strong(expired, StrandState::Chilling)) {
+        if (tasks_cnt_->load() != next_task_num_->load()) {
           Submit();
         }
       });
