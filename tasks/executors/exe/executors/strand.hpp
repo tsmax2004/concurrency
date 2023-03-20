@@ -34,8 +34,7 @@ class Strand : public IExecutor {
   IExecutor& underlying_executor_;
   LockFreePushStack<Task> task_stack_;
 
-  std::shared_ptr<twist::ed::stdlike::atomic<size_t>> tasks_cnt_;
-  std::shared_ptr<twist::ed::stdlike::atomic<size_t>> next_task_num_;
+  std::shared_ptr<twist::ed::stdlike::atomic<size_t>> submitted_cnt_;
 };
 
 }  // namespace exe::executors
