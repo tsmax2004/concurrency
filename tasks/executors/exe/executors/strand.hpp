@@ -38,7 +38,7 @@ class Strand : public IExecutor {
   void Submit();
 
   IExecutor& underlying_executor_;
-  std::shared_ptr<StrandLockFreeQueue<Task>> task_queue_;
+  std::shared_ptr<LockFreePushStack<Task>> task_stack_;
   std::shared_ptr<twist::ed::stdlike::atomic<StrandState>> state_;
 };
 
