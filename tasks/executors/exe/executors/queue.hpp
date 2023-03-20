@@ -20,7 +20,7 @@ class StrandLockFreeQueue {
   void PreparePop() {
     auto tmp_top = push_top_.exchange(nullptr);
     if (tmp_top == nullptr || tmp_top->prev == nullptr) {
-      pop_top_ = tmp_top;
+      pop_top_.store(tmp_top);
       return;
     }
 
@@ -34,11 +34,11 @@ class StrandLockFreeQueue {
       node = next;
     }
 
-    pop_top_ = prev;
+    pop_top_.store(prev);
   }
 
   bool PopEmpty() {
-    return pop_top_ == nullptr;
+    return pop_top_.load() == nullptr;
   }
 
   bool PushEmpty() {
@@ -46,9 +46,9 @@ class StrandLockFreeQueue {
   }
 
   T Pop() {
-    auto node = pop_top_;
+    auto node = pop_top_.load();
 
-    pop_top_ = node->prev;
+    pop_top_.store(node->prev);
     T obj = std::move(*((T*)node->obj));
     delete node;
 
@@ -62,5 +62,5 @@ class StrandLockFreeQueue {
   };
 
   twist::ed::stdlike::atomic<Node*> push_top_{nullptr};
-  Node* pop_top_{nullptr};
+  twist::ed::stdlike::atomic<Node*> pop_top_{nullptr};
 };
