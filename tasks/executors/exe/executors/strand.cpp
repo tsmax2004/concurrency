@@ -25,7 +25,7 @@ void Strand::Submit() {
           task_stack.pop();
         }
 
-        if (submitted_cnt_->fetch_sub(tasks_cnt) != 0) {
+        if (submitted_cnt->fetch_sub(tasks_cnt) != tasks_cnt) {
           Submit();
         }
       });
