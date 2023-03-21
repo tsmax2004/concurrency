@@ -12,6 +12,8 @@ namespace exe::executors::tp::compute {
 
 template <typename T>
 class UnboundedBlockingQueue {
+  using IntrusiveList = wheels::IntrusiveList<IntrusiveTask>;
+
  public:
   bool Put(T value) {
     std::lock_guard guard(mutex_);
@@ -19,7 +21,7 @@ class UnboundedBlockingQueue {
       return false;
     }
 
-    buffer_.push_back(std::move(value));
+    buffer_.PushBack(std::move(value));
     is_empty_.notify_one();
     return true;
   }
@@ -27,15 +29,14 @@ class UnboundedBlockingQueue {
   std::optional<T> Take() {
     std::unique_lock guard(mutex_);
 
-    while (buffer_.empty()) {
+    while (buffer_.IsEmpty()) {
       if (is_closed_) {
         return std::nullopt;
       }
       is_empty_.wait(guard);
     }
 
-    auto value = std::move(buffer_.front());
-    buffer_.pop_front();
+    auto value = std::move(buffer_.PopFront());
     return std::move(value);
   }
 
@@ -45,11 +46,15 @@ class UnboundedBlockingQueue {
     is_empty_.notify_all();
   }
 
+  ~UnboundedBlockingQueue() {
+    buffer_.UnlinkAll();
+  }
+
  private:
   twist::ed::stdlike::mutex mutex_;
   twist::ed::stdlike::condition_variable is_empty_;
 
-  std::deque<T> buffer_;
+  IntrusiveList buffer_;
   bool is_closed_{false};
 };
 

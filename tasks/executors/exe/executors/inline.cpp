@@ -5,8 +5,8 @@ namespace exe::executors {
 class InlineExecutor : public IExecutor {
  public:
   // IExecutor
-  void Submit(Task task) override {
-    task();
+  void Submit(IntrusiveTask* task) override {
+    task->Run();
   }
 };
 

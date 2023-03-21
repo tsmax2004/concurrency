@@ -2,8 +2,8 @@
 
 namespace exe::executors {
 
-void ManualExecutor::Submit(Task task) {
-  task_queue_.push(std::move(task));
+void ManualExecutor::Submit(TaskBase* task) {
+  task_list_.PushBack(task);
 }
 
 // Run tasks
@@ -11,8 +11,7 @@ void ManualExecutor::Submit(Task task) {
 size_t ManualExecutor::RunAtMost(size_t limit) {
   size_t completed = 0;
   while (NonEmpty() && completed < limit) {
-    task_queue_.front()();
-    task_queue_.pop();
+    task_list_.PopFront()->Run();
     ++completed;
   }
 

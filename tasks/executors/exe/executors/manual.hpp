@@ -9,6 +9,8 @@ namespace exe::executors {
 // Single-threaded task queue
 
 class ManualExecutor : public IExecutor {
+  using IntrusiveList = wheels::IntrusiveList<TaskBase>;
+
  public:
   ManualExecutor() = default;
 
@@ -21,7 +23,7 @@ class ManualExecutor : public IExecutor {
   ManualExecutor& operator=(ManualExecutor&&) = delete;
 
   // IExecutor
-  void Submit(Task) override;
+  void Submit(TaskBase*) override;
 
   // Run tasks
 
@@ -40,11 +42,11 @@ class ManualExecutor : public IExecutor {
   size_t Drain();
 
   size_t TaskCount() const {
-    return task_queue_.size();
+    return task_list_.Size();
   }
 
   bool IsEmpty() const {
-    return task_queue_.empty();
+    return task_list_.IsEmpty();
   }
 
   bool NonEmpty() const {
@@ -52,7 +54,7 @@ class ManualExecutor : public IExecutor {
   }
 
  private:
-  std::queue<Task> task_queue_;
+  IntrusiveList task_list_;
 };
 
 }  // namespace exe::executors

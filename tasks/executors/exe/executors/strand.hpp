@@ -5,16 +5,17 @@
 
 #include <exe/executors/executor.hpp>
 #include <exe/threads/spinlock.hpp>
-#include <exe/executors/queue.hpp>
+#include "exe/support/intrusive_stack.hpp"
 
 namespace exe::executors {
 
 // Strand / serial executor / asynchronous mutex
 
-class Strand : public IExecutor {
+class Strand : public IExecutor,
+               TaskBase {
   using Counter = twist::ed::stdlike::atomic<size_t>;
   using CounterPtr = std::shared_ptr<Counter>;
-  using TaskStack = LockFreePushStack<Task>;
+  using TaskStack = IntrusiveLockFreePushStack;
 
  public:
   explicit Strand(IExecutor& underlying);
@@ -28,10 +29,11 @@ class Strand : public IExecutor {
   Strand& operator=(Strand&&) = delete;
 
   // IExecutor
-  void Submit(Task cs) override;
+  //  void Submit(Task) override;
+  void Submit(IntrusiveTask*) override;
 
  private:
-  void Submit();
+  void Run() noexcept override;
 
   IExecutor& underlying_executor_;
   TaskStack task_stack_;

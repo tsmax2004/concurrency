@@ -24,9 +24,14 @@ ThreadPool::~ThreadPool() {
   WHEELS_ASSERT(is_stopped_, "Thread pool wasn't stopped");
 }
 
-void ThreadPool::Submit(Task task) {
+void ThreadPool::Submit(IntrusiveTask* task) {
   tasks_wg_.Add(1);
-  task_queue_.Put(std::move(task));
+  task_queue_.Put(task);
+}
+
+void ThreadPool::Submit(Task task) {
+  auto user_fun = new UserFunction<Task>(std::forward<Task>(task));
+  Submit(user_fun);
 }
 
 ThreadPool* ThreadPool::Current() {
@@ -51,7 +56,7 @@ void ThreadPool::Worker() {
 
   while (is_stopped_.load() == 0) {
     if (auto task = task_queue_.Take()) {
-      task.value()();
+      task.value()->Run();
       tasks_wg_.Done();
     }
   }

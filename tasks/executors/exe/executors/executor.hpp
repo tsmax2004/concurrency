@@ -9,7 +9,8 @@ namespace exe::executors {
 struct IExecutor {
   virtual ~IExecutor() = default;
 
-  virtual void Submit(Task task) = 0;
+  //  virtual void Submit(Task task) = 0;
+  virtual void Submit(IntrusiveTask* task) = 0;
 };
 
 }  // namespace exe::executors
