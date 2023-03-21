@@ -2,9 +2,9 @@
 
 #include <twist/ed/stdlike/mutex.hpp>
 #include <twist/ed/stdlike/condition_variable.hpp>
+#include <exe/executors/task.hpp>
 
 #include <optional>
-#include <deque>
 
 namespace exe::executors::tp::compute {
 
