@@ -2,7 +2,7 @@
 
 namespace exe::executors {
 
-void ManualExecutor::Submit(TaskBase* task) {
+void ManualExecutor::Submit(IntrusiveTask* task) {
   task_list_.PushBack(task);
 }
 

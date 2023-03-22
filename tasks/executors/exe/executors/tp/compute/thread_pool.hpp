@@ -35,6 +35,9 @@ class ThreadPool : public IExecutor {
   // Schedules task for execution in one of the worker threads
   void Submit(IntrusiveTask*);
 
+  // TODO: remove this after fix tests
+  void Submit(Task);
+
   // Locates current thread pool from worker thread
   static ThreadPool* Current();
 
@@ -50,8 +53,8 @@ class ThreadPool : public IExecutor {
   size_t num_workers_;
   std::vector<twist::ed::stdlike::thread> workers_;
 
-  IntrusiveUnboundedBlockingQueue<IntrusiveTask*> task_queue_;
-  WaitGroup tasks_wg_;  // tasks in queue counter
+  IntrusiveUnboundedBlockingQueue<IntrusiveTask> task_queue_;
+  WaitGroup tasks_wg_;  // not completed tasks counter
   twist::ed::stdlike::atomic<uint32_t> is_stopped_{0};
 };
 

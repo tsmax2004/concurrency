@@ -1,7 +1,6 @@
 #pragma once
 
 #include <exe/executors/executor.hpp>
-#include <function2/function2.hpp>
 
 namespace exe::executors {
 
@@ -13,6 +12,22 @@ namespace exe::executors {
  * });
  *
  */
+
+template <typename F>
+struct UserFunction : TaskBase {
+ public:
+  explicit UserFunction(F&& fun)
+      : fun_(std::forward<F>(fun)) {
+  }
+
+  void Run() noexcept override {
+    fun_();
+    delete this;
+  }
+
+ private:
+  F fun_;
+};
 
 template <typename F>
 void Submit(IExecutor& exe, F&& fun) {

@@ -4,7 +4,6 @@
 #include <memory>
 
 #include <exe/executors/executor.hpp>
-#include <exe/threads/spinlock.hpp>
 #include "exe/support/intrusive_stack.hpp"
 
 namespace exe::executors {
@@ -14,7 +13,7 @@ namespace exe::executors {
 class Strand : public IExecutor,
                TaskBase {
   using Counter = twist::ed::stdlike::atomic<size_t>;
-  using CounterPtr = std::shared_ptr<Counter>;
+  using CounterPtr = std::shared_ptr<twist::ed::stdlike::atomic<size_t>>;
   using TaskStack = IntrusiveLockFreePushStack;
 
  public:

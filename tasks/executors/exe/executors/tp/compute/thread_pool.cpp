@@ -4,6 +4,8 @@
 
 #include <wheels/core/panic.hpp>
 
+#include <exe/executors/submit.hpp>
+
 namespace exe::executors::tp::compute {
 
 static twist::ed::ThreadLocalPtr<ThreadPool> pool;
@@ -21,12 +23,17 @@ void ThreadPool::Start() {
 }
 
 ThreadPool::~ThreadPool() {
-  WHEELS_ASSERT(is_stopped_, "Thread pool wasn't stopped");
+  WHEELS_ASSERT(is_stopped_, "Thread pool wasn't stopped before destroyed");
 }
 
 void ThreadPool::Submit(IntrusiveTask* task) {
   tasks_wg_.Add(1);
   task_queue_.Put(task);
+}
+
+// TODO: remove
+void ThreadPool::Submit(Task task) {
+  exe::executors::Submit(*this, std::move(task));
 }
 
 ThreadPool* ThreadPool::Current() {
@@ -49,11 +56,9 @@ void ThreadPool::Stop() {
 void ThreadPool::Worker() {
   pool = this;
 
-  while (is_stopped_.load() == 0) {
-    if (auto task = task_queue_.Take()) {
-      task.value()->Run();
-      tasks_wg_.Done();
-    }
+  while (auto task = task_queue_.Take()) {
+    task->Run();
+    tasks_wg_.Done();
   }
 }
 

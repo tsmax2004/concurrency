@@ -27,12 +27,12 @@ class IntrusiveUnboundedBlockingQueue {
     return true;
   }
 
-  std::optional<T*> Take() {
+  T* Take() {
     std::unique_lock guard(mutex_);
 
     while (buffer_.IsEmpty()) {
       if (is_closed_) {
-        return std::nullopt;
+        return nullptr;
       }
       is_empty_.wait(guard);
     }
@@ -43,10 +43,6 @@ class IntrusiveUnboundedBlockingQueue {
 
   void Close() {
     std::lock_guard guard(mutex_);
-
-    while (buffer_.HasItems()) {
-      buffer_.PopFront()->Run();
-    }
 
     is_closed_ = true;
     is_empty_.notify_all();

@@ -18,24 +18,6 @@ struct ITask {
 };
 
 struct TaskBase : ITask,
-                  wheels::IntrusiveListNode<TaskBase> {
-  //
-};
-
-template <typename F>
-struct UserFunction : TaskBase {
- public:
-  explicit UserFunction(F&& fun)
-      : fun_(std::forward<F>(fun)) {
-  }
-
-  void Run() noexcept override {
-    fun_();
-    delete this;
-  }
-
- private:
-  F fun_;
-};
+                  wheels::IntrusiveListNode<TaskBase> {};
 
 }  // namespace exe::executors

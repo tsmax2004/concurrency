@@ -9,7 +9,7 @@ namespace exe::executors {
 // Single-threaded task queue
 
 class ManualExecutor : public IExecutor {
-  using IntrusiveList = wheels::IntrusiveList<TaskBase>;
+  using IntrusiveList = wheels::IntrusiveList<IntrusiveTask>;
 
  public:
   ManualExecutor() = default;
@@ -23,7 +23,7 @@ class ManualExecutor : public IExecutor {
   ManualExecutor& operator=(ManualExecutor&&) = delete;
 
   // IExecutor
-  void Submit(TaskBase*) override;
+  void Submit(IntrusiveTask*) override;
 
   // Run tasks
 
