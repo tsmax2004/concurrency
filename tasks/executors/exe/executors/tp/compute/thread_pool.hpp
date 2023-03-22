@@ -35,9 +35,6 @@ class ThreadPool : public IExecutor {
   // Schedules task for execution in one of the worker threads
   void Submit(IntrusiveTask*);
 
-  // TODO: remove this after fix tests
-  void Submit(Task);
-
   // Locates current thread pool from worker thread
   static ThreadPool* Current();
 

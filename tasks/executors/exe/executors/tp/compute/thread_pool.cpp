@@ -31,11 +31,6 @@ void ThreadPool::Submit(IntrusiveTask* task) {
   task_queue_.Put(task);
 }
 
-// TODO: remove
-void ThreadPool::Submit(Task task) {
-  exe::executors::Submit(*this, std::move(task));
-}
-
 ThreadPool* ThreadPool::Current() {
   return pool;
 }
