@@ -29,11 +29,6 @@ void ThreadPool::Submit(IntrusiveTask* task) {
   task_queue_.Put(task);
 }
 
-void ThreadPool::Submit(Task task) {
-  auto user_fun = new UserFunction<Task>(std::forward<Task>(task));
-  Submit(user_fun);
-}
-
 ThreadPool* ThreadPool::Current() {
   return pool;
 }

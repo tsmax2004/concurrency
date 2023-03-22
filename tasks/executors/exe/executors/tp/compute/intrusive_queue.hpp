@@ -9,24 +9,25 @@
 namespace exe::executors::tp::compute {
 
 // Unbounded blocking multi-producers/multi-consumers (MPMC) queue
+// for intrusive tasks
 
 template <typename T>
-class UnboundedBlockingQueue {
-  using IntrusiveList = wheels::IntrusiveList<IntrusiveTask>;
+class IntrusiveUnboundedBlockingQueue {
+  using IntrusiveList = wheels::IntrusiveList<T>;
 
  public:
-  bool Put(T value) {
+  bool Put(T* node) {
     std::lock_guard guard(mutex_);
     if (is_closed_) {
       return false;
     }
 
-    buffer_.PushBack(std::move(value));
+    buffer_.PushBack(node);
     is_empty_.notify_one();
     return true;
   }
 
-  std::optional<T> Take() {
+  std::optional<T*> Take() {
     std::unique_lock guard(mutex_);
 
     while (buffer_.IsEmpty()) {
@@ -36,18 +37,19 @@ class UnboundedBlockingQueue {
       is_empty_.wait(guard);
     }
 
-    auto value = std::move(buffer_.PopFront());
-    return std::move(value);
+    auto value = buffer_.PopFront();
+    return value;
   }
 
   void Close() {
     std::lock_guard guard(mutex_);
+
+    while (buffer_.HasItems()) {
+      buffer_.PopFront()->Run();
+    }
+
     is_closed_ = true;
     is_empty_.notify_all();
-  }
-
-  ~UnboundedBlockingQueue() {
-    buffer_.UnlinkAll();
   }
 
  private:

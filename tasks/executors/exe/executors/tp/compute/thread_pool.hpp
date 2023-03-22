@@ -3,7 +3,7 @@
 #include <vector>
 
 #include <exe/executors/executor.hpp>
-#include <exe/executors/tp/compute/queue.hpp>
+#include <exe/executors/tp/compute/intrusive_queue.hpp>
 #include <exe/executors/task.hpp>
 #include <exe/executors/tp/compute/wait_group.hpp>
 
@@ -35,8 +35,6 @@ class ThreadPool : public IExecutor {
   // Schedules task for execution in one of the worker threads
   void Submit(IntrusiveTask*);
 
-  void Submit(Task);
-
   // Locates current thread pool from worker thread
   static ThreadPool* Current();
 
@@ -52,7 +50,7 @@ class ThreadPool : public IExecutor {
   size_t num_workers_;
   std::vector<twist::ed::stdlike::thread> workers_;
 
-  UnboundedBlockingQueue<IntrusiveTask*> task_queue_;
+  IntrusiveUnboundedBlockingQueue<IntrusiveTask*> task_queue_;
   WaitGroup tasks_wg_;  // tasks in queue counter
   twist::ed::stdlike::atomic<uint32_t> is_stopped_{0};
 };
