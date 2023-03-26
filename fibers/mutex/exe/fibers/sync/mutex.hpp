@@ -45,7 +45,7 @@ class Mutex {
  private:
   struct MutexAwaiter : IAwaiter {
    public:
-    MutexAwaiter(Mutex* mutex)
+    explicit MutexAwaiter(Mutex* mutex)
         : mutex_(mutex) {
     }
 
