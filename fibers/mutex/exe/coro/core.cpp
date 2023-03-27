@@ -1,5 +1,5 @@
-// #include <exe/coro/core.hpp>
-#include "core.hpp"
+#include <exe/coro/core.hpp>
+#include <exe/coro/stack_allocator.hpp>
 #include <twist/ed/local/ptr.hpp>
 
 #include <wheels/core/assert.hpp>
@@ -7,12 +7,12 @@
 
 namespace exe::coro {
 
-static const size_t kDefaultStackSize = 64 * 1024;
+static StackAllocator stack_allocator{};
 
 twist::ed::ThreadLocalPtr<Coroutine> current_coroutine;
 
 Coroutine::Coroutine(Routine routine)
-    : stack_(sure::Stack::AllocateBytes(kDefaultStackSize)),
+    : stack_(stack_allocator.Allocate()),
       runnable_(std::move(routine)) {
   CreateCore();
 }
@@ -52,7 +52,7 @@ void Coroutine::CreateCore() {
 }
 
 void Coroutine::DestroyCore() {
-  stack_.Release();
+  stack_allocator.Release(std::move(stack_));
   core_.reset();
 }
 

@@ -8,6 +8,9 @@
 #include <exception>
 #include <memory>
 
+#include <optional>
+#include <vector>
+
 namespace exe::coro {
 
 class CoroutineCore {
