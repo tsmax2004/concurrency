@@ -5,6 +5,8 @@
 #include <optional>
 #include <vector>
 
+#include <twist/ed/stdlike/mutex.hpp>
+
 // Source:
 // https://gitlab.com/Lipovsky/tinyfibers/-/blob/master/tf/rt/stack_allocator.hpp
 
@@ -24,6 +26,7 @@ class StackAllocator {
   }
 
   void Release(Stack stack) {
+    std::lock_guard guard(mutex_);
     pool_.push_back(std::move(stack));
   }
 
@@ -32,6 +35,7 @@ class StackAllocator {
     return Stack::AllocateBytes(/*at_least=*/kDefaultStackSize);
   }
   std::optional<Stack> TryTakeFromPool() {
+    std::lock_guard guard(mutex_);
     if (pool_.empty()) {
       return std::nullopt;
     }
@@ -42,6 +46,7 @@ class StackAllocator {
   }
 
  private:
+  twist::ed::stdlike::mutex mutex_;
   std::vector<Stack> pool_;
 };
 
