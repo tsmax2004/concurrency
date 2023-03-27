@@ -51,7 +51,7 @@ void Coroutine::CreateCore() {
 }
 
 void Coroutine::DestroyCore() {
-  stack_.~Stack();
+  //  stack_.~Stack();
   core_.reset();
 }
 
