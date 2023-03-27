@@ -7,7 +7,7 @@ namespace exe::fibers {
 
 // Lightweight non-owning handle to a _suspended_ fiber
 
-class FiberHandle : public wheels::IntrusiveListNode<FiberHandle> {
+class FiberHandle {
   friend class Fiber;
 
  public:

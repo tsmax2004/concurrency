@@ -20,10 +20,6 @@ class WaitGroup {
   }
 
   void Wait() {
-    if (counter_.load() == 0) {
-      return;
-    }
-
     all_done_event_.Wait();
   }
 
