@@ -1,16 +1,30 @@
 #include <exe/fibers/sched/yield.hpp>
 #include <exe/fibers/sched/suspend.hpp>
 
+#include <exe/fibers/core/fiber.hpp>
+#include <exe/fibers/core/awaiter.hpp>
+
 namespace exe::fibers {
 
-YieldAwaiter yield_awaiter;
+struct YieldAwaiter : IAwaiter {
+ public:
+  bool AwaitReady() override {
+    return false;
+  }
 
-void YieldAwaiter::Await(FiberHandle fiber_handle) {
-  fiber_handle.Schedule();
-}
+  bool AwaitSuspend(FiberHandle fiber) override {
+    fiber.Schedule();
+    return true;
+  }
+
+  void AwaitResume() override {
+    WHEELS_UNREACHABLE();
+  }
+};
 
 void Yield() {
-  fibers::Suspend(&yield_awaiter);
+  YieldAwaiter awaiter;
+  Suspend(awaiter);
 }
 
 }  // namespace exe::fibers

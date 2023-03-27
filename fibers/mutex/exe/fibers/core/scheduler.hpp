@@ -4,6 +4,6 @@
 
 namespace exe::fibers {
 
-using Scheduler = executors::tp::ThreadPool;
+using Scheduler = executors::IExecutor;
 
 }  // namespace exe::fibers

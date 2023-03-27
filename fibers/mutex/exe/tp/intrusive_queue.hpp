@@ -6,7 +6,7 @@
 
 #include <optional>
 
-namespace exe::executors::tp {
+namespace exe::tp {
 
 // Unbounded blocking multi-producers/multi-consumers (MPMC) queue
 // for intrusive tasks
@@ -56,4 +56,4 @@ class IntrusiveUnboundedBlockingQueue {
   bool is_closed_{false};
 };
 
-}  // namespace exe::executors::tp
+}  // namespace exe::tp

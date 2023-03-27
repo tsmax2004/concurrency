@@ -5,13 +5,12 @@
 namespace exe::fibers {
 
 struct IAwaiter {
-  friend Fiber;
-
  public:
   virtual ~IAwaiter() = default;
 
- private:
-  virtual void Await(FiberHandle) = 0;
+  virtual bool AwaitReady() = 0;
+  virtual bool AwaitSuspend(FiberHandle) = 0;
+  virtual void AwaitResume() = 0;
 };
 
 }  // namespace exe::fibers

@@ -3,19 +3,21 @@
 #include <vector>
 
 #include <exe/executors/executor.hpp>
-#include <exe/executors/task.hpp>
 #include <exe/tp/intrusive_queue.hpp>
+#include <exe/executors/executor.hpp>
 #include <exe/tp/wait_group.hpp>
 
 #include <twist/ed/stdlike/thread.hpp>
 #include <twist/ed/local/ptr.hpp>
 #include <twist/ed/stdlike/atomic.hpp>
 
-namespace exe::executors::tp {
+namespace exe::tp {
 
 // Fixed-size pool of worker threads
 
-class ThreadPool : public IExecutor {
+class ThreadPool : public executors::IExecutor {
+  using IntrusiveTask = executors::IntrusiveTask;
+
  public:
   explicit ThreadPool(size_t threads);
   ~ThreadPool();
@@ -54,4 +56,4 @@ class ThreadPool : public IExecutor {
   twist::ed::stdlike::atomic<uint32_t> is_stopped_{0};
 };
 
-}  // namespace exe::executors::tp
+}  // namespace exe::tp

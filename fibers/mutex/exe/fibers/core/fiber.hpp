@@ -2,25 +2,26 @@
 
 #include <exe/fibers/core/routine.hpp>
 #include <exe/fibers/core/scheduler.hpp>
-#include <exe/fibers/core/awaiter.hpp>
+#include <exe/fibers/core/handle.hpp>
+
+#include <exe/fibers/sched/go.hpp>
 
 #include <exe/coro/core.hpp>
 
-#include <exe/executors/task.hpp>
+#include <exe/executors/executor.hpp>
 
-#include <exe/fibers/sched/go.hpp>
+#include <exe/fibers/core/awaiter.hpp>
 
 namespace exe::fibers {
 
 // Fiber = stackful coroutine + scheduler (executor)
 
-class Fiber : public executors::IntrusiveTask,
-              public wheels::IntrusiveListNode<Fiber> {
+class Fiber : executors::IntrusiveTask {
   friend void Go(Scheduler&, Routine);
   friend void Go(Routine);
 
  public:
-  void Suspend(IAwaiter*);
+  void Suspend(IAwaiter&);
 
   void Schedule();
   void Switch();

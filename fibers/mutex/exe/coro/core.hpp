@@ -76,5 +76,4 @@ class Coroutine {
   std::exception_ptr eptr_;
   CoroutineState state_;
 };
-
 }  // namespace exe::coro

@@ -1,4 +1,5 @@
 #pragma once
+
 #include <twist/ed/stdlike/atomic.hpp>
 #include <twist/ed/spin/wait.hpp>
 
@@ -9,16 +10,15 @@ namespace exe::threads {
 class SpinLock {
  public:
   void Lock() {
-    twist::ed::SpinWait spin_wait;
-    while (is_locked_.exchange(true)) {
-      while (is_locked_.load()) {
-        spin_wait();
+    while (locked_.exchange(true)) {
+      while (locked_.load()) {
+        twist::ed::CpuRelax();
       }
     }
   }
 
   void Unlock() {
-    is_locked_.store(false);
+    locked_.store(false);
   }
 
   // BasicLockable
@@ -32,7 +32,7 @@ class SpinLock {
   }
 
  private:
-  twist::ed::stdlike::atomic<bool> is_locked_{false};
+  twist::ed::stdlike::atomic<bool> locked_{false};
 };
 
 }  // namespace exe::threads

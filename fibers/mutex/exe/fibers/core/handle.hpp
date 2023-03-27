@@ -1,12 +1,13 @@
 #pragma once
 
 #include <exe/fibers/core/fwd.hpp>
+#include <wheels/intrusive/list.hpp>
 
 namespace exe::fibers {
 
 // Lightweight non-owning handle to a _suspended_ fiber
 
-class FiberHandle {
+class FiberHandle : public wheels::IntrusiveListNode<FiberHandle> {
   friend class Fiber;
 
  public:
@@ -35,6 +36,8 @@ class FiberHandle {
   }
 
   Fiber* Release();
+
+  void Acquire(Fiber*);
 
  private:
   Fiber* fiber_;

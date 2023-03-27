@@ -3,33 +3,26 @@
 // std::lock_guard and std::unique_lock
 #include <mutex>
 
-#include <exe/fibers/core/fiber.hpp>
+#include <exe/fibers/core/awaiter.hpp>
 
 #include <exe/fibers/sched/suspend.hpp>
-
-#include <exe/threads/spinlock.hpp>
+#include <exe/fibers/sched/yield.hpp>
 
 #include <twist/ed/stdlike/atomic.hpp>
 
 namespace exe::fibers {
 
-class Mutex {
-  using Fiber = exe::fibers::Fiber;
-  using IntrusiveList = wheels::IntrusiveList<Fiber>;
+// Use strand-like algorithm
 
+class Mutex {
  public:
   void Lock() {
-    fibers::Suspend(&awaiter_);
+    MutexAwaiter awaiter(*this);
+    Suspend(awaiter);
   }
 
   void Unlock() {
-    std::lock_guard guard(spin_lock_);
-
-    if (waiting_fibers_.IsEmpty()) {
-      is_locked_ = false;
-      return;
-    }
-    waiting_fibers_.PopFront()->Schedule();
+    Yield();
   }
 
   // BasicLockable
@@ -44,32 +37,64 @@ class Mutex {
 
  private:
   struct MutexAwaiter : IAwaiter {
+    friend Mutex;
+
    public:
-    explicit MutexAwaiter(Mutex* mutex)
+    explicit MutexAwaiter(Mutex& mutex)
         : mutex_(mutex) {
     }
 
-    void Await(FiberHandle fiber) override {
-      std::unique_lock guard(mutex_->spin_lock_);
+    bool AwaitReady() override {
+      return false;
+    }
 
-      if (!mutex_->is_locked_) {
-        mutex_->is_locked_ = true;
-        guard.unlock();
-        fiber.Switch();
-        return;
+    bool AwaitSuspend(FiberHandle fiber) override {
+      fiber_ = fiber;
+
+      auto waiter_num = mutex_.waiters_cnt_.fetch_add(1);
+      mutex_.Push(this);
+
+      if (waiter_num == 0) {
+        mutex_.RunCriticalSection();
       }
 
-      mutex_->waiting_fibers_.PushBack(Fiber::Self());
+      return true;
+    }
+
+    void AwaitResume() override {
+      fiber_.Switch();
     }
 
    private:
-    Mutex* mutex_;
+    Mutex& mutex_;
+    FiberHandle fiber_;
+    MutexAwaiter* next_;
   };
 
-  twist::ed::stdlike::atomic<bool> is_locked_{false};
-  threads::SpinLock spin_lock_;
-  IntrusiveList waiting_fibers_;
-  MutexAwaiter awaiter_{this};
+  void Push(MutexAwaiter* waiter) {
+    auto* old = waiters_.load();
+    do {
+      waiter->next_ = old;
+    } while (!waiters_.compare_exchange_strong(old, waiter));
+  }
+
+  void RunCriticalSection() {
+    auto* batch = waiters_.exchange(nullptr);
+    size_t cnt = 0;
+    while (batch != nullptr) {
+      auto* next = batch->next_;
+      batch->AwaitResume();
+      batch = next;
+      ++cnt;
+    }
+
+    if (waiters_cnt_.fetch_sub(cnt) != cnt) {
+      RunCriticalSection();
+    }
+  }
+
+  twist::ed::stdlike::atomic<size_t> waiters_cnt_{0};
+  twist::ed::stdlike::atomic<MutexAwaiter*> waiters_{nullptr};
 };
 
 }  // namespace exe::fibers

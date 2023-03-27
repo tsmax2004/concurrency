@@ -1,76 +1,86 @@
 #pragma once
-#include <exe/fibers/core/fiber.hpp>
-#include <exe/fibers/core/handle.hpp>
-#include <exe/fibers/core/awaiter.hpp>
-
-#include <exe/fibers/sched/suspend.hpp>
-
-#include <exe/threads/spinlock.hpp>
-
-#include <wheels/intrusive/list.hpp>
 
 #include <twist/ed/stdlike/atomic.hpp>
 
+#include <exe/fibers/core/handle.hpp>
+#include <exe/fibers/sched/suspend.hpp>
+
 namespace exe::fibers {
+
+// Source:
+// https://lewissbaker.github.io/2017/11/17/understanding-operator-co-await
 
 // One-shot
 
 class Event {
-  using Fiber = exe::fibers::Fiber;
-  using IntrusiveList = wheels::IntrusiveList<Fiber>;
-
  public:
   void Wait() {
-    if (is_fired_.load()) {
-      return;
-    }
-
-    fibers::Suspend(&event_awaiter_);
+    EventAwaiter awaiter(*this);
+    Suspend(awaiter);
   }
 
   void Fire() {
-    IntrusiveList tmp_list;
-    {
-      std::lock_guard guard(spinlock_);
-      is_fired_.store(true);
-      if (waiting_fibers_.IsEmpty()) {
-        return;
-      }
-      tmp_list.Append(waiting_fibers_);
-    }  // destroy guard
+    void* old_state = event_state_.exchange(this);
+    if (old_state == nullptr || old_state == this) {
+      return;
+    }
 
-    while (tmp_list.HasItems()) {
-      auto fiber = tmp_list.PopFront();
-      fiber->Schedule();
+    auto* awaiter = static_cast<EventAwaiter*>(old_state);
+    while (awaiter != nullptr) {
+      auto* next = awaiter->next_;
+      awaiter->AwaitResume();
+      awaiter = next;
     }
   }
 
  private:
+  bool IsFired() {
+    return event_state_.load() == this;
+  }
+
   struct EventAwaiter : IAwaiter {
+    friend Event;
+
    public:
-    explicit EventAwaiter(Event* event)
+    explicit EventAwaiter(Event& event)
         : event_(event) {
     }
 
-    void Await(FiberHandle fiber) override {
-      std::unique_lock guard(event_->spinlock_);
-      if (event_->is_fired_.load()) {
-        guard.unlock();
-        fiber.Switch();
-        return;
-      }
+    bool AwaitReady() override {
+      return event_.IsFired();
+    }
 
-      event_->waiting_fibers_.PushBack(Fiber::Self());
+    bool AwaitSuspend(FiberHandle fiber) override {
+      fiber_ = fiber;
+
+      void* old = event_.event_state_.load();
+
+      do {
+        if (AwaitReady()) {  // fired
+          return false;
+        }
+
+        next_ = static_cast<EventAwaiter*>(old);
+      } while (!event_.event_state_.compare_exchange_strong(old, this));
+
+      return true;
+    }
+
+    void AwaitResume() override {
+      fiber_.Schedule();
     }
 
    private:
-    Event* event_;
+    Event& event_;
+    FiberHandle fiber_;
+    EventAwaiter* next_{nullptr};  // in waiting queue
   };
 
-  twist::ed::stdlike::atomic<bool> is_fired_{false};
-  threads::SpinLock spinlock_;
-  IntrusiveList waiting_fibers_;
-  EventAwaiter event_awaiter_{this};
+  // State explanation:
+  // 1) nullptr       - not fired (by default)
+  // 2) this          - fired
+  // 3) EventAwaiter* - ptr to waiting queue
+  twist::ed::stdlike::atomic<void*> event_state_{nullptr};
 };
 
 }  // namespace exe::fibers

@@ -6,8 +6,11 @@ namespace exe::fibers {
 
 twist::ed::ThreadLocalPtr<Fiber> current_fiber;
 
-void Fiber::Suspend(IAwaiter* awaiter) {
-  awaiter_ = awaiter;
+void Fiber::Suspend(IAwaiter& awaiter) {
+  if (awaiter.AwaitReady()) {
+    return;
+  }
+  awaiter_ = &awaiter;
   coroutine_.Suspend();
 }
 
@@ -16,27 +19,25 @@ void Fiber::Schedule() {
 }
 
 void Fiber::Switch() {
-  coroutine_.Resume();
-  if (coroutine_.IsCompleted()) {
-    delete this;
-  } else {
-    awaiter_->Await(FiberHandle(this));
-  }
+  Run();
 }
 
 void Fiber::Run() noexcept {
   Fiber* prev_fiber = current_fiber;
-  current_fiber = this;
 
+  current_fiber = this;
   coroutine_.Resume();
+  current_fiber = prev_fiber;
 
   if (coroutine_.IsCompleted()) {
     delete this;
-  } else {
-    awaiter_->Await(FiberHandle(this));
+    return;
   }
 
-  current_fiber = prev_fiber;
+  if (awaiter_->AwaitSuspend(FiberHandle(this))) {
+    return;
+  }
+  Run();
 }
 
 Fiber* Fiber::Self() {

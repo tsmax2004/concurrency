@@ -4,7 +4,9 @@
 
 #include <wheels/core/panic.hpp>
 
-namespace exe::executors::tp {
+#include <exe/executors/submit.hpp>
+
+namespace exe::tp {
 
 static twist::ed::ThreadLocalPtr<ThreadPool> pool;
 
@@ -55,4 +57,4 @@ void ThreadPool::Worker() {
   }
 }
 
-}  // namespace exe::executors::tp
+}  // namespace exe::tp

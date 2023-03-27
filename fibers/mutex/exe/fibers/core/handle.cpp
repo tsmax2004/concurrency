@@ -20,5 +20,9 @@ void FiberHandle::Schedule() {
 void FiberHandle::Switch() {
   Release()->Switch();
 }
+void FiberHandle::Acquire(Fiber* fiber) {
+  WHEELS_ASSERT(!IsValid(), "Already acquired");
+  fiber_ = fiber;
+}
 
 }  // namespace exe::fibers

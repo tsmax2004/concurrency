@@ -4,6 +4,6 @@
 
 namespace exe::fibers {
 
-void Suspend(IAwaiter*);
+void Suspend(IAwaiter& awaiter);
 
 }  // namespace exe::fibers
