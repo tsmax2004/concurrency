@@ -47,9 +47,6 @@ class WaitingQueue {
 
  private:
   bool PrepareBatch() {
-    WHEELS_ASSERT(tail_.load() != nullptr, "incorrect tail state");
-    WHEELS_ASSERT(batch_ == nullptr, "incorrect batch state");
-
     auto* free_expected = &empty_;
     if (tail_.compare_exchange_strong(free_expected, nullptr)) {
       return false;
@@ -67,7 +64,6 @@ class WaitingQueue {
 
     batch_ = node;
 
-    WHEELS_ASSERT(batch_ != nullptr, "incorrect batch state");
     return true;
   }
 
