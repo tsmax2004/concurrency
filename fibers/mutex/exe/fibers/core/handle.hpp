@@ -1,7 +1,6 @@
 #pragma once
 
 #include <exe/fibers/core/fwd.hpp>
-#include <wheels/intrusive/list.hpp>
 
 namespace exe::fibers {
 
@@ -36,8 +35,6 @@ class FiberHandle {
   }
 
   Fiber* Release();
-
-  void Acquire(Fiber*);
 
  private:
   Fiber* fiber_;

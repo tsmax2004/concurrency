@@ -8,17 +8,9 @@ namespace exe::fibers {
 
 struct YieldAwaiter : IAwaiter {
  public:
-  bool AwaitReady() override {
-    return false;
-  }
-
   bool AwaitSuspend(FiberHandle fiber) override {
     fiber.Schedule();
     return true;
-  }
-
-  void AwaitResume() override {
-    WHEELS_UNREACHABLE();
   }
 };
 

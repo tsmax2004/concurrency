@@ -8,6 +8,8 @@
 #include <exe/fibers/sched/suspend.hpp>
 #include <exe/fibers/sched/yield.hpp>
 
+#include <exe/fibers/sync/mutex_waiting_queue.hpp>
+
 #include <twist/ed/stdlike/atomic.hpp>
 
 namespace exe::fibers {
@@ -17,12 +19,13 @@ namespace exe::fibers {
 class Mutex {
  public:
   void Lock() {
-    MutexAwaiter awaiter(*this);
+    MutexLockAwaiter awaiter(*this);
     Suspend(awaiter);
   }
 
   void Unlock() {
-    Yield();
+    MutexUnlockAwaiter awaiter(*this);
+    Suspend(awaiter);
   }
 
   // BasicLockable
@@ -36,65 +39,49 @@ class Mutex {
   }
 
  private:
-  struct MutexAwaiter : IAwaiter {
+  struct MutexLockAwaiter : IAwaiter,
+                            IntrusiveNode<MutexLockAwaiter> {
     friend Mutex;
 
    public:
-    explicit MutexAwaiter(Mutex& mutex)
+    explicit MutexLockAwaiter(Mutex& mutex)
         : mutex_(mutex) {
-    }
-
-    bool AwaitReady() override {
-      return false;
     }
 
     bool AwaitSuspend(FiberHandle fiber) override {
       fiber_ = fiber;
-
-      auto waiter_num = mutex_.waiters_cnt_.fetch_add(1);
-      mutex_.Push(this);
-
-      if (waiter_num == 0) {
-        mutex_.RunCriticalSection();
-      }
-
-      return true;
-    }
-
-    void AwaitResume() override {
-      fiber_.Switch();
+      return !mutex_.waiting_queue_.TryLockLock(this);
     }
 
    private:
     Mutex& mutex_;
     FiberHandle fiber_;
-    MutexAwaiter* next_;
   };
 
-  void Push(MutexAwaiter* waiter) {
-    auto* old = waiters_.load();
-    do {
-      waiter->next_ = old;
-    } while (!waiters_.compare_exchange_strong(old, waiter));
-  }
+  struct MutexUnlockAwaiter : IAwaiter {
+    friend Mutex;
 
-  void RunCriticalSection() {
-    auto* batch = waiters_.exchange(nullptr);
-    size_t cnt = 0;
-    while (batch != nullptr) {
-      auto* next = batch->next_;
-      batch->AwaitResume();
-      batch = next;
-      ++cnt;
+    explicit MutexUnlockAwaiter(Mutex& mutex)
+        : mutex_(mutex) {
     }
 
-    if (waiters_cnt_.fetch_sub(cnt) != cnt) {
-      RunCriticalSection();
+    bool AwaitSuspend(FiberHandle fiber) override {
+      auto* next = mutex_.waiting_queue_.Pop();
+      if (next == nullptr) {
+        return false;
+      } else {
+        fiber.Schedule();
+        next->fiber_.Switch();
+        return true;
+      }
     }
-  }
 
-  twist::ed::stdlike::atomic<size_t> waiters_cnt_{0};
-  twist::ed::stdlike::atomic<MutexAwaiter*> waiters_{nullptr};
+   private:
+    Mutex& mutex_;
+    FiberHandle fiber_;
+  };
+
+  WaitingQueue<MutexLockAwaiter> waiting_queue_;
 };
 
 }  // namespace exe::fibers

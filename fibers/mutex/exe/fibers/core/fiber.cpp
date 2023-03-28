@@ -7,9 +7,6 @@ namespace exe::fibers {
 twist::ed::ThreadLocalPtr<Fiber> current_fiber;
 
 void Fiber::Suspend(IAwaiter& awaiter) {
-  if (awaiter.AwaitReady()) {
-    return;
-  }
   awaiter_ = &awaiter;
   coroutine_.Suspend();
 }

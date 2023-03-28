@@ -15,20 +15,21 @@ namespace exe::fibers {
 class Event {
  public:
   void Wait() {
+    if (IsFired()) {
+      return;
+    }
+
     EventAwaiter awaiter(*this);
     Suspend(awaiter);
   }
 
   void Fire() {
     void* old_state = event_state_.exchange(this);
-    if (old_state == nullptr || old_state == this) {
-      return;
-    }
 
     auto* awaiter = static_cast<EventAwaiter*>(old_state);
     while (awaiter != nullptr) {
       auto* next = awaiter->next_;
-      awaiter->AwaitResume();
+      awaiter->fiber_.Schedule();
       awaiter = next;
     }
   }
@@ -46,17 +47,13 @@ class Event {
         : event_(event) {
     }
 
-    bool AwaitReady() override {
-      return event_.IsFired();
-    }
-
     bool AwaitSuspend(FiberHandle fiber) override {
       fiber_ = fiber;
 
       void* old = event_.event_state_.load();
 
       do {
-        if (AwaitReady()) {  // fired
+        if (event_.IsFired()) {
           return false;
         }
 
@@ -64,10 +61,6 @@ class Event {
       } while (!event_.event_state_.compare_exchange_strong(old, this));
 
       return true;
-    }
-
-    void AwaitResume() override {
-      fiber_.Schedule();
     }
 
    private:
