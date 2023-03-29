@@ -1,5 +1,4 @@
 #pragma once
-
 // std::lock_guard and std::unique_lock
 #include <mutex>
 
