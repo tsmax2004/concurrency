@@ -3,28 +3,23 @@
 // std::lock_guard and std::unique_lock
 #include <mutex>
 
+#include <exe/fibers/sync/mutex_waiting_queue.hpp>
+
 #include <exe/fibers/core/awaiter.hpp>
 
 #include <exe/fibers/sched/suspend.hpp>
-#include <exe/fibers/sched/yield.hpp>
-
-#include <exe/fibers/sync/mutex_waiting_queue.hpp>
-
-#include <twist/ed/stdlike/atomic.hpp>
 
 namespace exe::fibers {
-
-// Use strand-like algorithm
 
 class Mutex {
  public:
   void Lock() {
-    MutexLockAwaiter awaiter(*this);
+    LockAwaiter awaiter(*this);
     Suspend(awaiter);
   }
 
   void Unlock() {
-    MutexUnlockAwaiter awaiter(*this);
+    UnlockAwaiter awaiter(*this);
     Suspend(awaiter);
   }
 
@@ -39,18 +34,22 @@ class Mutex {
   }
 
  private:
-  struct MutexLockAwaiter : IAwaiter,
-                            IntrusiveNode<MutexLockAwaiter> {
+  struct LockAwaiter : IAwaiter,
+                       IntrusiveQueueNode<LockAwaiter> {
     friend Mutex;
 
    public:
-    explicit MutexLockAwaiter(Mutex& mutex)
+    explicit LockAwaiter(Mutex& mutex)
         : mutex_(mutex) {
     }
 
-    bool AwaitSuspend(FiberHandle fiber) override {
+    bool AwaitSuspend(FiberHandle fiber) {
       fiber_ = fiber;
-      return !mutex_.waiting_queue_.TryLockLock(this);
+      if (mutex_.waiting_queue_.TryLockPush(this)) {
+        mutex_.waiting_queue_.Pop();
+        return false;
+      }
+      return true;
     }
 
    private:
@@ -58,30 +57,42 @@ class Mutex {
     FiberHandle fiber_;
   };
 
-  struct MutexUnlockAwaiter : IAwaiter {
-    friend Mutex;
-
-    explicit MutexUnlockAwaiter(Mutex& mutex)
+  struct UnlockAwaiter : IAwaiter {
+   public:
+    explicit UnlockAwaiter(Mutex& mutex)
         : mutex_(mutex) {
     }
 
-    bool AwaitSuspend(FiberHandle fiber) override {
-      auto* next = mutex_.waiting_queue_.Pop();
-      if (next == nullptr) {
-        return false;
-      } else {
+    bool AwaitSuspend(FiberHandle fiber) {
+      if (mutex_.worker_exists_) {
         fiber.Schedule();
-        next->fiber_.Switch();
         return true;
       }
+
+      Mutex& mutex = mutex_;
+      LockAwaiter* next = mutex_.waiting_queue_.Pop();
+      if (next != nullptr) {
+        fiber.Schedule();
+      } else {
+        return false;
+      }
+
+      do {
+        mutex.worker_exists_ = true;
+        next->fiber_.Switch();
+        mutex.worker_exists_ = false;
+        next = mutex.waiting_queue_.Pop();
+      } while (next != nullptr);
+
+      return true;
     }
 
    private:
     Mutex& mutex_;
-    FiberHandle fiber_;
   };
 
-  WaitingQueue<MutexLockAwaiter> waiting_queue_;
+  WaitingQueue<LockAwaiter> waiting_queue_;
+  bool worker_exists_{false};
 };
 
 }  // namespace exe::fibers

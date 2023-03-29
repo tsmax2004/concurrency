@@ -1,75 +1,73 @@
-#pragma once
-
 #include <twist/ed/stdlike/atomic.hpp>
 
-#include <exe/fibers/core/awaiter.hpp>
-
-// LockFree waiting queue for mutex
-
-namespace exe::fibers {
-
 template <typename T>
-struct IntrusiveNode {
+struct IntrusiveQueueNode {
  public:
   T* AsItem() {
     return static_cast<T*>(this);
   }
 
-  IntrusiveNode* next_;
+  IntrusiveQueueNode<T>* next_;
 };
 
 template <typename T>
 class WaitingQueue {
-  using IntrusiveNode = IntrusiveNode<T>;
-
  public:
-  bool TryLockLock(IntrusiveNode* node) {
-    auto* old = tail_.load();
-    do {
-      node->next_ = old;
-    } while (!tail_.compare_exchange_strong(old, node));
-
-    if (old == nullptr) {
-      Pop();
-      return true;
+  bool TryLockPush(IntrusiveQueueNode<T>* node) {
+    IntrusiveQueueNode<T>* next = tail_.load();
+    node->next_ = next;
+    while (!tail_.compare_exchange_strong(next, node)) {
+      node->next_ = next;
     }
-    return false;
+
+    return next == &free_;
   }
 
   T* Pop() {
-    if (batch_ == nullptr && !PrepareBatch()) {
+    if (!PrepareHead()) {
       return nullptr;
     }
-    auto* obj = batch_->AsItem();
-    batch_ = batch_->next_;
-    return obj;
+
+    IntrusiveQueueNode<T>* ret = head_;
+    head_ = head_->next_;
+    return ret->AsItem();
   }
 
  private:
-  bool PrepareBatch() {
-    auto* free_expected = &empty_;
-    if (tail_.compare_exchange_strong(free_expected, nullptr)) {
+  bool PrepareHead() {
+    if (head_ != nullptr) {
+      return true;
+    }
+    if (TryOpen()) {
       return false;
     }
 
-    auto* node = tail_.exchange(&empty_);
-    auto* next = node->next_;
-    node->next_ = nullptr;
-    while (next != nullptr && next != &empty_) {
-      auto* tmp_next = next->next_;
-      next->next_ = node;
-      node = next;
-      next = tmp_next;
+    WaitingQueue<T> tmp;
+    IntrusiveQueueNode<T>* node = tail_.exchange(&locked_);
+    while (node != &free_ && node != &locked_ && node != nullptr) {
+      IntrusiveQueueNode<T>* tmp_next = node->next_;
+      tmp.PushOnHead(node);
+      node = tmp_next;
     }
 
-    batch_ = node;
-
+    head_ = tmp.head_;
     return true;
   }
 
-  IntrusiveNode empty_;
-  twist::ed::stdlike::atomic<IntrusiveNode*> tail_{nullptr};
-  IntrusiveNode* batch_{nullptr};
-};
+  void PushOnHead(IntrusiveQueueNode<T>* node) {
+    IntrusiveQueueNode<T>* next = head_;
+    head_ = node;
+    head_->next_ = next;
+  }
 
-}  // namespace exe::fibers
+  bool TryOpen() {
+    IntrusiveQueueNode<T>* expected = &locked_;
+    return tail_.compare_exchange_strong(expected, &free_);
+  }
+
+  IntrusiveQueueNode<T> free_;
+  IntrusiveQueueNode<T> locked_;
+
+  IntrusiveQueueNode<T>* head_{nullptr};
+  twist::ed::stdlike::atomic<IntrusiveQueueNode<T>*> tail_{&free_};
+};
