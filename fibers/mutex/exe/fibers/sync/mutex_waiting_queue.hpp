@@ -30,7 +30,9 @@ class WaitingQueue {
       return nullptr;
     }
 
-    return std::exchange(head_, head_->next_)->AsItem();
+    IntrusiveQueueNode<T>* ret = head_;
+    head_ = head_->next_;
+    return ret->AsItem();
   }
 
  private:
