@@ -74,8 +74,8 @@ class Mutex {
         return false;
       }
 
-      fiber.Schedule();
       Mutex& mutex = mutex_;
+      fiber.Schedule();
       do {
         mutex.worker_exists_ = true;
         next->fiber_.Switch();
