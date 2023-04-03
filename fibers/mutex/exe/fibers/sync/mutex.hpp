@@ -1,4 +1,5 @@
 #pragma once
+
 // std::lock_guard and std::unique_lock
 #include <mutex>
 
@@ -34,7 +35,7 @@ class Mutex {
 
  private:
   struct LockAwaiter : IAwaiter,
-                       IntrusiveQueueNode<LockAwaiter> {
+                       support::IntrusiveQueueNode<LockAwaiter> {
     friend Mutex;
 
    public:
@@ -68,14 +69,13 @@ class Mutex {
         return true;
       }
 
-      Mutex& mutex = mutex_;
       LockAwaiter* next = mutex_.waiting_queue_.Pop();
-      if (next != nullptr) {
-        fiber.Schedule();
-      } else {
+      if (next == nullptr) {
         return false;
       }
 
+      fiber.Schedule();
+      Mutex& mutex = mutex_;
       do {
         mutex.worker_exists_ = true;
         next->fiber_.Switch();
@@ -90,7 +90,7 @@ class Mutex {
     Mutex& mutex_;
   };
 
-  WaitingQueue<LockAwaiter> waiting_queue_;
+  support::WaitingQueue<LockAwaiter> waiting_queue_;
   bool worker_exists_{false};
 };
 

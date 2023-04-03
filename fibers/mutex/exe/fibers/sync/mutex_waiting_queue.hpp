@@ -1,5 +1,7 @@
 #include <twist/ed/stdlike/atomic.hpp>
 
+namespace exe::fibers::support {
+
 template <typename T>
 struct IntrusiveQueueNode {
  public:
@@ -28,9 +30,7 @@ class WaitingQueue {
       return nullptr;
     }
 
-    IntrusiveQueueNode<T>* ret = head_;
-    head_ = head_->next_;
-    return ret->AsItem();
+    return std::exchange(head_, head_->next_)->AsItem();
   }
 
  private:
@@ -71,3 +71,5 @@ class WaitingQueue {
   IntrusiveQueueNode<T>* head_{nullptr};
   twist::ed::stdlike::atomic<IntrusiveQueueNode<T>*> tail_{&free_};
 };
+
+}  // namespace exe::fibers::support
