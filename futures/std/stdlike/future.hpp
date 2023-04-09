@@ -49,9 +49,17 @@ class Future {
   // One-shot (although it can be multiple-shots)
   // Wait for result (value or exception)
   T Get() {
+    get_called_ = true;
+
     GetValueCallback<T> callback;
     buffer_ptr_->Consume(&callback);
     return std::forward<T>(callback.GetValue());
+  }
+
+  ~Future() {
+    if (!get_called_) {
+      buffer_ptr_->Consume(nullptr);
+    }
   }
 
  private:
@@ -59,7 +67,7 @@ class Future {
       : buffer_ptr_(buffer_ptr) {
   }
 
- private:
+  bool get_called_{false};
   detail::SharedBuffer<T>* buffer_ptr_;
 };
 
