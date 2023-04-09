@@ -1,6 +1,7 @@
 #pragma once
 
 #include <twist/ed/stdlike/atomic.hpp>
+#include <twist/ed/wait/sys.hpp>
 
 #include <stdlike/shared_buffer.hpp>
 #include <stdlike/callback.hpp>
@@ -14,12 +15,14 @@ struct GetValueCallback : detail::Callback<T> {
  public:
   void operator()(detail::Result<T> result) override {
     result_ = std::move(result);
-    is_ready_.store(true);
-    is_ready_.notify_one();
+
+    auto key = twist::ed::PrepareWake(is_ready_);
+    is_ready_.store(1);
+    twist::ed::WakeOne(key);
   }
 
   T GetValue() {
-    is_ready_.wait(false);
+    twist::ed::Wait(is_ready_, 0);
 
     if (!result_.has_value()) {
       std::rethrow_exception(result_.error());
@@ -29,7 +32,7 @@ struct GetValueCallback : detail::Callback<T> {
 
  private:
   detail::Result<T> result_{tl::make_unexpected(nullptr)};
-  twist::ed::stdlike::atomic<bool> is_ready_{false};
+  twist::ed::stdlike::atomic<uint32_t> is_ready_{0};
 };
 
 template <typename T>
