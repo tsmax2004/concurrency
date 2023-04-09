@@ -43,8 +43,16 @@ class Future {
   Future& operator=(const Future&) = delete;
 
   // Movable
-  Future(Future&&) = default;
-  Future& operator=(Future&&) = default;
+  Future(Future&& other)
+      : get_called_(other.get_called_),
+        buffer_ptr_(other.buffer_ptr_) {
+    other.buffer_ptr_ = nullptr;
+  }
+  Future& operator=(Future&& other) {
+    buffer_ptr_ = other.buffer_ptr_;
+    get_called_ = other.get_called_;
+    other.buffer_ptr_ = nullptr;
+  };
 
   // One-shot (although it can be multiple-shots)
   // Wait for result (value or exception)
@@ -57,7 +65,7 @@ class Future {
   }
 
   ~Future() {
-    if (!get_called_) {
+    if (buffer_ptr_ != nullptr && !get_called_) {
       buffer_ptr_->Consume(nullptr);
     }
   }
