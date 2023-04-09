@@ -28,6 +28,8 @@ struct SharedBuffer {
     state_.wait(State::Consume);
 
     if (eptr_ != nullptr) {
+      auto result = Result<T>(tl::make_unexpected(eptr_));
+      delete this;
       return Result<T>(tl::make_unexpected(eptr_));
     }
 
