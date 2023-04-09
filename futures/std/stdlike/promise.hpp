@@ -1,21 +1,16 @@
 #pragma once
 
 #include <stdlike/future.hpp>
-#include <stdlike/buffer.hpp>
-
-#include <memory>
+#include <stdlike/shared_buffer.hpp>
+#include <stdlike/result.hpp>
 
 namespace stdlike {
 
 template <typename T>
 class Promise {
-  using Buffer = detail::Buffer<T>;
-  using BufferPtr = std::shared_ptr<Buffer>;
-  using BufferState = detail::BuffetState;
-
  public:
   Promise() {
-    buffer_ptr_ = std::make_shared<Buffer>();
+    buffer_ptr_ = new detail::SharedBuffer<T>();
   }
 
   // Non-copyable
@@ -39,24 +34,16 @@ class Promise {
 
   // One-shot
   // Fulfill promise with value
-  void SetValue(T value) {
+  void SetValue(T&& value) {
     CheckSetException();
-    std::lock_guard guard(buffer_ptr_->mutex);
-
-    buffer_ptr_->value = std::move(value);
-    buffer_ptr_->state_ = BufferState::OBJECT;
-    buffer_ptr_->is_ready_cv.notify_one();
+    buffer_ptr_->SetValue(std::forward<T>(value));
   }
 
   // One-shot
   // Fulfill promise with exception
   void SetException(std::exception_ptr exception) {
     CheckSetException();
-    std::lock_guard guard(buffer_ptr_->mutex);
-
-    buffer_ptr_->value = std::move(exception);
-    buffer_ptr_->state_ = BufferState::EXCEPTION;
-    buffer_ptr_->is_ready_cv.notify_one();
+    buffer_ptr_->SetException(std::move(exception));
   }
 
  private:
@@ -68,7 +55,7 @@ class Promise {
     is_set_ = true;
   }
 
-  BufferPtr buffer_ptr_;
+  detail::SharedBuffer<T>* buffer_ptr_;
   bool is_future_made_{false};
   bool is_set_{false};
 };
