@@ -22,7 +22,7 @@ class WorkStealingQueue {
       return false;
     }
 
-    tail_.fetch_add(1, std::memory_order_relaxed);
+    tail_.fetch_add(1, std::memory_order_release);
     return true;
   }
 
@@ -56,7 +56,7 @@ class WorkStealingQueue {
 
  private:
   size_t Size() {
-    return tail_.load(std::memory_order_relaxed) -
+    return tail_.load(std::memory_order_acquire) -
            head_.load(std::memory_order_relaxed);
   }
 
