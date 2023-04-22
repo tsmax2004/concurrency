@@ -16,7 +16,7 @@ class WorkStealingQueue {
 
  public:
   bool TryPush(T* item) {
-    if (buffer_[tail_ % Capacity].is_filled.load(std::memory_order_seq_cst)) {
+    if (buffer_[tail_ % Capacity].is_filled.load(std::memory_order_release)) {
       return false;
     }
 
@@ -43,7 +43,7 @@ class WorkStealingQueue {
     auto grab_size = std::min(out_buffer.size(), Size());
     while (!head_.compare_exchange_strong(grab_head, grab_head + grab_size,
                                           std::memory_order_seq_cst,
-                                          std::memory_order_seq_cst)) {
+                                          std::memory_order_release)) {
       grab_size = std::min(out_buffer.size(), Size());
     }
     if (!buffer_[grab_head % Capacity].is_filled.load(
@@ -57,8 +57,8 @@ class WorkStealingQueue {
 
  private:
   size_t Size() {
-    return tail_.load(std::memory_order_seq_cst) -
-           head_.load(std::memory_order_seq_cst);
+    return tail_.load(std::memory_order_release) -
+           head_.load(std::memory_order_release);
   }
 
   void MoveItems(size_t from, size_t to, std::span<T*> out) {
