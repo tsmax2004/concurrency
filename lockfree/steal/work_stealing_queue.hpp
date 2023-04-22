@@ -22,7 +22,7 @@ class WorkStealingQueue {
       return false;
     }
 
-    tail_.fetch_add(1, std::memory_order_release);
+    tail_.fetch_add(1, std::memory_order_relaxed);
     return true;
   }
 
@@ -56,13 +56,14 @@ class WorkStealingQueue {
 
  private:
   size_t Size() {
-    return tail_.load(std::memory_order_acquire) -
+    return tail_.load(std::memory_order_relaxed) -
            head_.load(std::memory_order_relaxed);
   }
 
   void MoveItems(size_t from, size_t to, std::span<T*> out) {
     for (auto i = from; i < to; ++i) {
-      out[i - from] = buffer_[i % Capacity].item.exchange(nullptr);
+      out[i - from] = buffer_[i % Capacity].item.exchange(
+          nullptr, std::memory_order_relaxed);
     }
   }
 
