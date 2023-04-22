@@ -16,14 +16,14 @@ class WorkStealingQueue {
 
  public:
   bool TryPush(T* item) {
-    if (buffer_[tail_ % Capacity].is_filled.load(std::memory_order_relaxed)) {
+    if (buffer_[tail_ % Capacity].is_filled.load(std::memory_order_seq_cst)) {
       return false;
     }
 
     buffer_[tail_ % Capacity].item = item;
-    buffer_[tail_ % Capacity].is_filled.store(true, std::memory_order_release);
+    buffer_[tail_ % Capacity].is_filled.store(true, std::memory_order_seq_cst);
 
-    tail_.fetch_add(1, std::memory_order_relaxed);
+    tail_.fetch_add(1, std::memory_order_seq_cst);
     return true;
   }
 
@@ -39,15 +39,15 @@ class WorkStealingQueue {
 
   // Returns number of tasks
   size_t Grab(std::span<T*> out_buffer) {
-    auto grab_head = head_.load(std::memory_order_relaxed);
+    auto grab_head = head_.load(std::memory_order_seq_cst);
     auto grab_size = std::min(out_buffer.size(), Size());
     while (!head_.compare_exchange_strong(grab_head, grab_head + grab_size,
-                                          std::memory_order_acquire,
-                                          std::memory_order_relaxed)) {
+                                          std::memory_order_seq_cst,
+                                          std::memory_order_seq_cst)) {
       grab_size = std::min(out_buffer.size(), Size());
     }
     if (!buffer_[grab_head % Capacity].is_filled.load(
-            std::memory_order_relaxed)) {
+            std::memory_order_seq_cst)) {
       return 0;
     }
 
@@ -57,15 +57,15 @@ class WorkStealingQueue {
 
  private:
   size_t Size() {
-    return tail_.load(std::memory_order_relaxed) -
-           head_.load(std::memory_order_relaxed);
+    return tail_.load(std::memory_order_seq_cst) -
+           head_.load(std::memory_order_seq_cst);
   }
 
   void MoveItems(size_t from, size_t to, std::span<T*> out) {
     for (auto i = from; i < to; ++i) {
       out[i - from] = buffer_[i % Capacity].item;
       buffer_[i % Capacity].item = nullptr;
-      buffer_[i % Capacity].is_filled.store(false, std::memory_order_release);
+      buffer_[i % Capacity].is_filled.store(false, std::memory_order_seq_cst);
     }
   }
 
