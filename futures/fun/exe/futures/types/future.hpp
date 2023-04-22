@@ -26,7 +26,8 @@ struct [[nodiscard]] Future {
   Future& operator=(Future&) = delete;
 
   // Movable
-  Future(Future&& other) = default;
+  Future(Future&& other)
+      : buffer_ptr_(std::move(other.buffer_ptr_)){};
 
   void Consume(detail::Callback<T> callback) {
     buffer_ptr_->Consume(std::move(callback));
