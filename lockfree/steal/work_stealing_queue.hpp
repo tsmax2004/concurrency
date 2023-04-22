@@ -10,18 +10,17 @@
 template <typename T, size_t Capacity>
 class WorkStealingQueue {
   struct Slot {
-    T* item{nullptr};
-    twist::ed::stdlike::atomic<bool> is_filled{false};
+    twist::ed::stdlike::atomic<T*> item{nullptr};
   };
 
  public:
   bool TryPush(T* item) {
-    if (buffer_[tail_ % Capacity].is_filled.load(std::memory_order_relaxed)) {
+    T* expected = nullptr;
+    if (!buffer_[tail_ % Capacity].item.compare_exchange_strong(
+            expected, item, std::memory_order_relaxed,
+            std::memory_order_relaxed)) {
       return false;
     }
-
-    buffer_[tail_ % Capacity].item = item;
-    buffer_[tail_ % Capacity].is_filled.store(true, std::memory_order_relaxed);
 
     tail_.fetch_add(1, std::memory_order_release);
     return true;
@@ -46,8 +45,8 @@ class WorkStealingQueue {
                                           std::memory_order_relaxed)) {
       grab_size = std::min(out_buffer.size(), Size());
     }
-    if (!buffer_[grab_head % Capacity].is_filled.load(
-            std::memory_order_relaxed)) {
+    if (buffer_[grab_head % Capacity].item.load(std::memory_order_relaxed) ==
+        nullptr) {
       return 0;
     }
 
@@ -63,9 +62,7 @@ class WorkStealingQueue {
 
   void MoveItems(size_t from, size_t to, std::span<T*> out) {
     for (auto i = from; i < to; ++i) {
-      out[i - from] = buffer_[i % Capacity].item;
-      buffer_[i % Capacity].item = nullptr;
-      buffer_[i % Capacity].is_filled.store(false, std::memory_order_relaxed);
+      out[i - from] = buffer_[i % Capacity].item.exchange(nullptr);
     }
   }
 
