@@ -11,7 +11,7 @@ namespace exe::futures {
 
 template <typename X, typename Y>
 struct BothFinish {
-  BothFinish(Promise<std::tuple<X, Y>>&& p)
+  explicit BothFinish(Promise<std::tuple<X, Y>>&& p)
       : promise_(std::move(p)) {
   }
 

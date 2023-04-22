@@ -16,7 +16,7 @@ namespace exe::futures::detail {
 template <typename T>
 struct SharedBuffer {
  public:
-  SharedBuffer(executors::IExecutor& exe)
+  explicit SharedBuffer(executors::IExecutor& exe)
       : executor_(&exe) {
   }
 
