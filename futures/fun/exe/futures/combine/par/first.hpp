@@ -35,7 +35,7 @@ struct FirstFinish {
   }
 
  private:
-  enum State : int {
+  enum State : uint8_t {
     Init = 0,
     Error = 1,
     Value = 2,

@@ -22,23 +22,17 @@ struct SharedBuffer {
 
   void Set(Result<T> result) {
     result_.emplace(std::move(result));
-    if (state_.fetch_or(State::Produced) == State::Consumed) {
-      Rendezvous();
-    }
+    Produce();
   }
 
   void SetValue(T&& obj) {
     result_.emplace(std::forward<T>(obj));
-    if (state_.fetch_or(State::Produced) == State::Consumed) {
-      Rendezvous();
-    }
+    Produce();
   }
 
-  void SetException(Error eptr) {
-    result_.emplace(tl::make_unexpected(std::move(eptr)));
-    if (state_.fetch_or(State::Produced) == State::Consumed) {
-      Rendezvous();
-    }
+  void SetException(Error error) {
+    result_.emplace(tl::make_unexpected(std::move(error)));
+    Produce();
   }
 
   void Consume(Callback<T> callback) {
@@ -57,6 +51,12 @@ struct SharedBuffer {
   }
 
  private:
+  void Produce() {
+    if (state_.fetch_or(State::Produced) == State::Consumed) {
+      Rendezvous();
+    }
+  }
+
   void Rendezvous() {
     executors::Submit(*executor_,
                       [callback = std::move(callback_),

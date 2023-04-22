@@ -26,10 +26,7 @@ struct [[nodiscard]] Future {
   Future& operator=(Future&) = delete;
 
   // Movable
-  Future(Future&& other) {
-    buffer_ptr_ = other.buffer_ptr_;
-    other.buffer_ptr_ = nullptr;
-  }
+  Future(Future&& other) = default;
 
   void Consume(detail::Callback<T> callback) {
     buffer_ptr_->Consume(std::move(callback));
@@ -43,6 +40,7 @@ struct [[nodiscard]] Future {
     return buffer_ptr_->GetExecutor();
   }
 
+ private:
   detail::SharedBuffer<T>* buffer_ptr_;
 };
 

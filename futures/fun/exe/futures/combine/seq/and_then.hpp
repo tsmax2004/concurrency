@@ -25,19 +25,19 @@ struct [[nodiscard]] AndThen {
   using U = result::traits::ValueOf<std::invoke_result_t<F, T>>;
 
   template <typename T>
-  Future<U<T>> Pipe(Future<T> mapping) {
-    auto [mapped, p] = Contract<U<T>>(mapping.GetExecutor());
+  Future<U<T>> Pipe(Future<T> producer) {
+    auto [consumer, promise] = Contract<U<T>>(producer.GetExecutor());
 
-    mapping.Consume(
-        [p = std::move(p), fun = std::move(fun)](Result<T> result) mutable {
-          if (result.has_value()) {
-            std::move(p).Set(std::move(fun(std::move(result.value()))));
-          } else {
-            std::move(p).SetError(std::move(result.error()));
-          }
-        });
+    producer.Consume([promise = std::move(promise),
+                      fun = std::move(fun)](Result<T> result) mutable {
+      if (result.has_value()) {
+        std::move(promise).Set(std::move(fun(std::move(result.value()))));
+      } else {
+        std::move(promise).SetError(std::move(result.error()));
+      }
+    });
 
-    return std::move(mapped);
+    return std::move(consumer);
   }
 };
 

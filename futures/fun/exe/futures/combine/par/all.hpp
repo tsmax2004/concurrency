@@ -20,15 +20,14 @@ struct BothFinish {
     uint8_t prev_state;
     if (result.has_value()) {
       if (order == 0) {
-        std::get<0>(values_) = std::move(result.value());
+        value_1_.emplace(std::move(result.value()));
       } else {
-        std::get<1>(values_) = std::move(result.value());
+        value_2_.emplace(std::move(result.value()));
       }
 
       prev_state = state_.fetch_or(State::Value);
       if (prev_state == State::Value) {
-        std::move(promise_).SetValue({std::move(std::get<0>(values_).value()),
-                                      std::move(std::get<1>(values_).value())});
+        std::move(promise_).SetValue({value_1_.value(), value_2_.value()});
       }
     } else {
       prev_state = state_.fetch_or(State::Error);
@@ -43,13 +42,14 @@ struct BothFinish {
   }
 
  private:
-  enum State : int {
+  enum State : uint8_t {
     Init = 0,
     Error = 1,
     Value = 2,
   };
 
-  std::tuple<std::optional<X>, std::optional<Y>> values_;
+  std::optional<X> value_1_;
+  std::optional<Y> value_2_;
   Promise<std::tuple<X, Y>> promise_;
   twist::ed::stdlike::atomic<uint8_t> state_{State::Init};
 };

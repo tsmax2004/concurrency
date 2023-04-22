@@ -15,19 +15,19 @@ struct [[nodiscard]] OrElse {
   }
 
   template <typename T>
-  Future<T> Pipe(Future<T> mapping) {
-    auto [mapped, p] = Contract<T>(mapping.GetExecutor());
+  Future<T> Pipe(Future<T> producer) {
+    auto [consumer, promise] = Contract<T>(producer.GetExecutor());
 
-    mapping.Consume(
-        [p = std::move(p), fun = std::move(fun)](Result<T> result) mutable {
-          if (result.has_value()) {
-            std::move(p).Set(std::move(result));
-          } else {
-            std::move(p).Set(std::move(fun(std::move(result.error()))));
-          }
-        });
+    producer.Consume([promise = std::move(promise),
+                      fun = std::move(fun)](Result<T> result) mutable {
+      if (result.has_value()) {
+        std::move(promise).Set(std::move(result));
+      } else {
+        std::move(promise).Set(std::move(fun(std::move(result.error()))));
+      }
+    });
 
-    return std::move(mapped);
+    return std::move(consumer);
   }
 };
 
