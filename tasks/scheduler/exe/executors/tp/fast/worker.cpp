@@ -59,7 +59,9 @@ IntrusiveTask* Worker::PickTask() {
       return task;
     }
 
-    host_.coordinator_.Wait(epoch);
+    if (!is_end_.load()) {
+      host_.coordinator_.Wait(epoch);
+    }
   }
 
   return nullptr;
