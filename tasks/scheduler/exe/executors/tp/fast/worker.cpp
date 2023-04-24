@@ -113,25 +113,31 @@ IntrusiveTask* Worker::TryPickTask() {
 IntrusiveTask* Worker::TryStealTasks() {
   static const size_t kTasksToSteal = kLocalQueueCapacity / host_.threads_;
 
-  std::mt19937_64 gen(host_.random_());
+  //  std::mt19937_64 gen(host_.random_());
   size_t stolen_tasks = 0;
-  std::deque<Worker*> workers;
+  //  std::deque<Worker*> workers;
   for (auto& worker : host_.workers_) {
-    if (&worker != this) {
-      workers.push_back(&worker);
+    //    if (&worker != this) {
+    //      workers.push_back(&worker);
+    //    }
+    if (&worker == this) {
+      continue;
     }
-  }
-
-  while (stolen_tasks < kTasksToSteal && !workers.empty()) {
-    std::uniform_int_distribution<int> uniform_dist(0, workers.size() - 1);
-    auto i = uniform_dist(gen);
-
-    auto sz = workers[i]->local_tasks_.Grab(
+    auto sz = worker.local_tasks_.Grab(
         std::span(tmp_buf_ + stolen_tasks, kTasksToSteal - stolen_tasks));
     stolen_tasks += sz;
-
-    workers.erase(workers.begin() + i);
   }
+
+  //  while (stolen_tasks < kTasksToSteal && !workers.empty()) {
+  //    std::uniform_int_distribution<int> uniform_dist(0, workers.size() - 1);
+  //    auto i = uniform_dist(gen);
+  //
+  //    auto sz = workers[i]->local_tasks_.Grab(
+  //        std::span(tmp_buf_ + stolen_tasks, kTasksToSteal - stolen_tasks));
+  //    stolen_tasks += sz;
+  //
+  //    workers.erase(workers.begin() + i);
+  //  }
 
   if (stolen_tasks == 0) {
     return nullptr;
