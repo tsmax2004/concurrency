@@ -16,9 +16,10 @@ class WorkStealingQueue {
  public:
   bool TryPush(T* item) {
     T* expected = nullptr;
-    if (!buffer_[tail_ % Capacity].item.compare_exchange_strong(
-            expected, item, std::memory_order_relaxed,
-            std::memory_order_relaxed)) {
+    if (!buffer_[tail_.load(std::memory_order_relaxed) % Capacity]
+             .item.compare_exchange_strong(expected, item,
+                                           std::memory_order_relaxed,
+                                           std::memory_order_relaxed)) {
       return false;
     }
 
