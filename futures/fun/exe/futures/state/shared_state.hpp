@@ -14,7 +14,7 @@
 namespace exe::futures::detail {
 
 template <typename T>
-struct SharedBuffer {
+struct SharedBuffer : executors::IntrusiveTask {
  public:
   explicit SharedBuffer(executors::IExecutor& exe)
       : executor_(&exe) {
@@ -57,14 +57,13 @@ struct SharedBuffer {
     }
   }
 
-  void Rendezvous() {
-    executors::Submit(*executor_,
-                      [callback = std::move(callback_),
-                       result = std::move(result_.value())]() mutable {
-                        callback(std::move(result));
-                      });
-
+  void Run() noexcept override {
+    callback_(std::move(result_.value()));
     delete this;
+  }
+
+  void Rendezvous() {
+    executor_->Submit(this);
   }
 
   enum State : uint8_t {

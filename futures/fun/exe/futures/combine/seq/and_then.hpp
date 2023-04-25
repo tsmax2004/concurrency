@@ -31,7 +31,7 @@ struct [[nodiscard]] AndThen {
     producer.Consume([promise = std::move(promise),
                       fun = std::move(fun)](Result<T> result) mutable {
       if (result.has_value()) {
-        std::move(promise).Set(std::move(fun(std::move(result.value()))));
+        std::move(promise).Set(fun(std::move(result.value())));
       } else {
         std::move(promise).SetError(std::move(result.error()));
       }

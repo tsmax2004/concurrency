@@ -23,7 +23,7 @@ struct [[nodiscard]] OrElse {
       if (result.has_value()) {
         std::move(promise).Set(std::move(result));
       } else {
-        std::move(promise).Set(std::move(fun(std::move(result.error()))));
+        std::move(promise).Set(fun(std::move(result.error())));
       }
     });
 
