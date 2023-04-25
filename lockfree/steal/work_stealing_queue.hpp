@@ -45,8 +45,8 @@ class WorkStealingQueue {
                                           std::memory_order_relaxed)) {
       grab_size = std::min(out_buffer.size(), Size());
     }
-    if (buffer_[grab_head % Capacity].item.load(std::memory_order_relaxed) ==
-        nullptr) {
+
+    if (grab_size == 0) {
       return 0;
     }
 
