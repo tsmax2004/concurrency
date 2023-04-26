@@ -27,7 +27,7 @@ class Worker {
 #endif
 
  public:
-  Worker(ThreadPool& host);
+  explicit Worker(ThreadPool& host);
 
   void Start();
   void Join();
