@@ -9,7 +9,7 @@ namespace exe::fibers {
 struct YieldAwaiter : IAwaiter {
  public:
   bool AwaitSuspend(FiberHandle fiber) override {
-    fiber.Schedule(executors::SchedulerHint::OtherThread);
+    fiber.Schedule(executors::SchedulerHint::ToOtherThread);
     return true;
   }
 };

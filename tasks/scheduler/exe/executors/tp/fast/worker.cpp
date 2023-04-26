@@ -7,7 +7,7 @@
 
 namespace exe::executors::tp::fast {
 
-twist::ed::ThreadLocalPtr<Worker> this_worker{nullptr};
+TWISTED_THREAD_LOCAL_PTR(Worker, this_worker);
 
 Worker::Worker(ThreadPool& host)
     : host_(host),
@@ -69,7 +69,7 @@ void Worker::Push(TaskBase* task, SchedulerHint hint) {
   }
   lifo_streak_ = 0;
 
-  if (hint == SchedulerHint::OtherThread) {
+  if (hint == SchedulerHint::ToOtherThread) {
     host_.global_tasks_.Push(task);
     return;
   }
