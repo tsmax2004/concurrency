@@ -6,7 +6,7 @@ ThreadPool::ThreadPool(size_t threads)
     : threads_(threads),
       coordinator_(threads_) {
   for (size_t i = 0; i < threads; ++i) {
-    workers_.emplace_back(*this, i);
+    workers_.emplace_back(*this);
   }
 }
 
@@ -20,9 +20,14 @@ ThreadPool::~ThreadPool() {
 }
 
 void ThreadPool::Submit(TaskBase* task) {
+  Submit(task, SchedulerHint::UpToYou);
+}
+
+void ThreadPool::Submit(exe::executors::IntrusiveTask* task,
+                        exe::executors::SchedulerHint hint) {
   task_counter_.Add(1);
   if (MyWorker(Worker::Current())) {
-    Worker::Current()->Push(task, SchedulerHint::UpToYou);
+    Worker::Current()->Push(task, hint);
   } else {
     global_tasks_.Push(task);
   }

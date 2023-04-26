@@ -11,6 +11,7 @@
 #include <exe/coro/simple.hpp>
 
 #include <exe/executors/executor.hpp>
+#include <exe/executors/hint.hpp>
 
 #include <exe/fibers/core/awaiter.hpp>
 
@@ -26,6 +27,7 @@ class Fiber : executors::IntrusiveTask {
   void Suspend(IAwaiter&);
 
   void Schedule();
+  void Schedule(executors::SchedulerHint);
   void Switch();
 
   // Task

@@ -12,7 +12,11 @@ void Fiber::Suspend(IAwaiter& awaiter) {
 }
 
 void Fiber::Schedule() {
-  scheduler_.Submit(this);
+  Schedule(executors::SchedulerHint::UpToYou);
+}
+
+void Fiber::Schedule(executors::SchedulerHint hint) {
+  scheduler_.Submit(this, hint);
 }
 
 void Fiber::Switch() {

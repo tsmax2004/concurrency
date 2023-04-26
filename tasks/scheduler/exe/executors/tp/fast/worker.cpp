@@ -9,9 +9,8 @@ namespace exe::executors::tp::fast {
 
 twist::ed::ThreadLocalPtr<Worker> this_worker{nullptr};
 
-Worker::Worker(ThreadPool& host, size_t index)
+Worker::Worker(ThreadPool& host)
     : host_(host),
-      index_(index),
       twister_(host_.random_()) {
 }
 
@@ -61,8 +60,16 @@ Worker* Worker::Current() {
   return this_worker;
 }
 
-void Worker::Push(TaskBase* task, SchedulerHint /*hint*/) {
-  if (PushToLocalQueue(task)) {
+void Worker::Push(TaskBase* task, SchedulerHint hint) {
+  static const size_t kLifoMaxStreak = 64;
+
+  if (hint == SchedulerHint::Next && ++lifo_streak_ < kLifoMaxStreak) {
+    PushToLifoSlot(task);
+    return;
+  }
+  lifo_streak_ = 0;
+
+  if (hint == SchedulerHint::UpToYou && PushToLocalQueue(task)) {
     return;
   }
 
@@ -84,10 +91,13 @@ IntrusiveTask* Worker::PickTask() {
   while (!host_.is_stopped_.load()) {
     IntrusiveTask* task;
 
-    if (++iter_ % kGlobalQueueGrabFrequency == 0) {
+    if (++pick_tick_ % kGlobalQueueGrabFrequency == 0) {
       if ((task = TryGrabTasksFromGlobalQueue()) != nullptr) {
         return task;
       }
+    }
+    if ((task = TryPickTaskFromLifoSlot()) != nullptr) {
+      return task;
     }
     if ((task = TryPickTask()) != nullptr) {
       return task;
@@ -118,6 +128,17 @@ bool Worker::CheckBeforePark() {
   return false;
 }
 
+size_t Worker::StealTasks(std::span<TaskBase*> out_buffer) {
+  return local_tasks_.Grab(out_buffer);
+}
+
+void Worker::PushToLifoSlot(IntrusiveTask* task) {
+  if (lifo_slot_ != nullptr) {
+    Push(lifo_slot_, SchedulerHint::UpToYou);
+  }
+  lifo_slot_ = task;
+}
+
 bool Worker::PushToLocalQueue(IntrusiveTask* task) {
   return local_tasks_.TryPush(task);
 }
@@ -131,6 +152,12 @@ void Worker::OffloadTasksToGlobalQueue(IntrusiveTask* overflow) {
 
 IntrusiveTask* Worker::TryPickTask() {
   return local_tasks_.TryPop();
+}
+
+IntrusiveTask* Worker::TryPickTaskFromLifoSlot() {
+  auto ret = lifo_slot_;
+  lifo_slot_ = nullptr;
+  return ret;
 }
 
 IntrusiveTask* Worker::TryStealTasks() {
@@ -150,7 +177,7 @@ IntrusiveTask* Worker::TryStealTasks() {
       continue;
     }
 
-    stolen = worker.local_tasks_.Grab(std::span(tmp_buf_, kTaskToSteal));
+    stolen = worker.StealTasks(std::span(tmp_buf_, kTaskToSteal));
   }
 
   if (stolen == 0) {

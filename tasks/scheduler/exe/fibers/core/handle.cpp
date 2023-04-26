@@ -14,11 +14,15 @@ Fiber* FiberHandle::Release() {
 }
 
 void FiberHandle::Schedule() {
-  Release()->Schedule();
+  Schedule(executors::SchedulerHint::UpToYou);
 }
 
 void FiberHandle::Switch() {
   Release()->Switch();
+}
+
+void FiberHandle::Schedule(executors::SchedulerHint hint) {
+  Release()->Schedule(hint);
 }
 
 }  // namespace exe::fibers

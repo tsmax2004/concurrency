@@ -1,6 +1,7 @@
 #pragma once
 
 #include <exe/fibers/core/fwd.hpp>
+#include <exe/executors/hint.hpp>
 
 namespace exe::fibers {
 
@@ -23,8 +24,8 @@ class FiberHandle {
   }
 
   // Schedule to the associated scheduler
-  // TODO: Support scheduler hints
   void Schedule();
+  void Schedule(executors::SchedulerHint);
 
   // Switch to this fiber immediately
   // For symmetric transfer

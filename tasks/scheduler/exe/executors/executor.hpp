@@ -8,8 +8,8 @@ namespace exe::executors {
 struct IExecutor {
   virtual ~IExecutor() = default;
 
-  // TODO: Support scheduler hints
   virtual void Submit(IntrusiveTask* task) = 0;
+  virtual void Submit(IntrusiveTask* task, SchedulerHint hint) = 0;
 };
 
 }  // namespace exe::executors

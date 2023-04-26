@@ -27,7 +27,7 @@ class Worker {
 #endif
 
  public:
-  Worker(ThreadPool& host, size_t index);
+  Worker(ThreadPool& host);
 
   void Start();
   void Join();
@@ -58,7 +58,7 @@ class Worker {
   void OffloadTasksToGlobalQueue(IntrusiveTask* overflow);
 
   // Use in TryPickTask
-  TaskBase* TryPickTaskFromLifoSlot();
+  IntrusiveTask* TryPickTaskFromLifoSlot();
   IntrusiveTask* TryStealTasks();
   IntrusiveTask* TryGrabTasksFromGlobalQueue();
 
@@ -81,19 +81,21 @@ class Worker {
   bool TransitFromParked();
 
   ThreadPool& host_;
-  const size_t index_;
 
   // Worker thread
   std::optional<twist::ed::stdlike::thread> thread_;
 
   // Scheduling iteration
-  size_t iter_ = 0;
+  size_t pick_tick_{0};
+
+  // Counter of lifo scheduling in a row
+  size_t lifo_streak_{0};
 
   // Local queue
   WorkStealingQueue<kLocalQueueCapacity> local_tasks_;
 
   // LIFO slot
-  twist::ed::stdlike::atomic<TaskBase*> lifo_slot_{nullptr};
+  IntrusiveTask* lifo_slot_{nullptr};
 
   // Deterministic pseudo-randomness for work stealing
   std::mt19937_64 twister_;

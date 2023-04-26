@@ -34,6 +34,7 @@ class ThreadPool : public IExecutor {
 
   // IExecutor
   void Submit(IntrusiveTask*) override;
+  void Submit(IntrusiveTask*, SchedulerHint) override;
 
   void WaitIdle();
 
