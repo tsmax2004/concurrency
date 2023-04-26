@@ -11,7 +11,8 @@ twist::ed::ThreadLocalPtr<Worker> this_worker{nullptr};
 
 Worker::Worker(ThreadPool& host, size_t index)
     : host_(host),
-      index_(index) {
+      index_(index),
+      twister_(host_.random_()) {
 }
 
 void Worker::Start() {
@@ -21,12 +22,39 @@ void Worker::Start() {
   });
 }
 
-void Worker::Stop() {
-  is_end_.store(true);
+void Worker::Work() {
+  IntrusiveTask* task;
+  while ((task = PickTask()) != nullptr) {
+    TransitFromSpinning();
+
+    task->Run();
+    host_.task_counter_.Done();
+  }
+}
+
+void Worker::Park() {
+  wakeups_.store(1);
+
+  if (!TransitToParked()) {
+    wakeups_.store(0);
+    return;
+  }
+
+  do {
+    if (!host_.is_stopped_.load()) {
+      twist::ed::Wait(wakeups_, 1);
+    }
+  } while (!TransitFromParked());
 }
 
 void Worker::Join() {
   thread_->join();
+}
+
+void Worker::Wake() {
+  auto key = twist::ed::PrepareWake(wakeups_);
+  wakeups_.store(0);
+  twist::ed::WakeOne(key);
 }
 
 Worker* Worker::Current() {
@@ -51,28 +79,43 @@ IntrusiveTask* Worker::PickTask() {
   // Then
   //   Park worker
 
-  while (!is_end_.load()) {
-    auto epoch = host_.coordinator_.GetCurrentEpoch();
-    auto task = TryPickTask();
+  static const size_t kGlobalQueueGrabFrequency = 61;
 
-    if (task != nullptr) {
+  while (!host_.is_stopped_.load()) {
+    IntrusiveTask* task;
+
+    if (++iter_ % kGlobalQueueGrabFrequency == 0) {
+      if ((task = TryGrabTasksFromGlobalQueue()) != nullptr) {
+        return task;
+      }
+    }
+    if ((task = TryPickTask()) != nullptr) {
+      return task;
+    }
+    if ((task = TryGrabTasksFromGlobalQueue()) != nullptr) {
+      return task;
+    }
+    if ((task = TryStealTasks()) != nullptr) {
       return task;
     }
 
-    if (!is_end_.load()) {
-      host_.coordinator_.Wait(epoch);
-    }
+    Park();
   }
 
   return nullptr;
 }
 
-void Worker::Work() {
-  IntrusiveTask* task;
-  while ((task = PickTask()) != nullptr) {
-    task->Run();
-    host_.task_counter_.Done();
+bool Worker::CheckBeforePark() {
+  if (host_.global_tasks_.HasItems()) {
+    return true;
   }
+  for (auto& worker : host_.workers_) {
+    if (worker.local_tasks_.HasItems()) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 bool Worker::PushToLocalQueue(IntrusiveTask* task) {
@@ -87,65 +130,34 @@ void Worker::OffloadTasksToGlobalQueue(IntrusiveTask* overflow) {
 }
 
 IntrusiveTask* Worker::TryPickTask() {
-  static const size_t kGlobalQueueGrabFrequency = 61;
-
-  IntrusiveTask* task;
-
-  if (++iter_ % kGlobalQueueGrabFrequency == 0) {
-    if ((task = TryGrabTasksFromGlobalQueue()) != nullptr) {
-      return task;
-    }
-  }
-
-  if ((task = local_tasks_.TryPop()) != nullptr) {
-    return task;
-  }
-
-  if ((task = TryGrabTasksFromGlobalQueue()) != nullptr) {
-    return task;
-  }
-
-  if ((task = TryStealTasks()) != nullptr) {
-    return task;
-  }
-
-  return nullptr;
+  return local_tasks_.TryPop();
 }
 
 IntrusiveTask* Worker::TryStealTasks() {
-  static const size_t kTasksToSteal = kLocalQueueCapacity / host_.threads_;
+  static const auto kTaskToSteal = kLocalQueueCapacity / host_.threads_;
 
-  //  std::mt19937_64 gen(host_.random_());
-  size_t stolen_tasks = 0;
-  //  std::deque<Worker*> workers;
-  for (auto& worker : host_.workers_) {
-    //    if (&worker != this) {
-    //      workers.push_back(&worker);
-    //    }
+  if (!TransitToSpinning()) {
+    return nullptr;
+  }
+
+  std::uniform_int_distribution<int> uniform_dist(0, host_.threads_ - 1);
+  auto start = uniform_dist(twister_);
+  size_t stolen = 0;
+
+  for (size_t i = 0; i < host_.threads_ && stolen == 0; ++i) {
+    auto& worker = host_.workers_[(start + i) % host_.threads_];
     if (&worker == this) {
       continue;
     }
-    auto sz = worker.local_tasks_.Grab(
-        std::span(tmp_buf_ + stolen_tasks, kTasksToSteal - stolen_tasks));
-    stolen_tasks += sz;
+
+    stolen = worker.local_tasks_.Grab(std::span(tmp_buf_, kTaskToSteal));
   }
 
-  //  while (stolen_tasks < kTasksToSteal && !workers.empty()) {
-  //    std::uniform_int_distribution<int> uniform_dist(0, workers.size() - 1);
-  //    auto i = uniform_dist(gen);
-  //
-  //    auto sz = workers[i]->local_tasks_.Grab(
-  //        std::span(tmp_buf_ + stolen_tasks, kTasksToSteal - stolen_tasks));
-  //    stolen_tasks += sz;
-  //
-  //    workers.erase(workers.begin() + i);
-  //  }
-
-  if (stolen_tasks == 0) {
-    return nullptr;
+  if (stolen == 0) {
+    return TryGrabTasksFromGlobalQueue();
   }
-  local_tasks_.PushMany(std::span(tmp_buf_ + 1, stolen_tasks - 1));
-  host_.coordinator_.WakeOne();
+
+  local_tasks_.PushMany(std::span(tmp_buf_ + 1, stolen - 1));
   return tmp_buf_[0];
 }
 
@@ -157,9 +169,48 @@ IntrusiveTask* Worker::TryGrabTasksFromGlobalQueue() {
   if (sz == 0) {
     return nullptr;
   }
+
   local_tasks_.PushMany(std::span(tmp_buf_ + 1, sz - 1));
-  host_.coordinator_.WakeOne();
   return tmp_buf_[0];
+}
+
+bool Worker::TransitToSpinning() {
+  if (!is_spinning_) {
+    is_spinning_ = host_.coordinator_.TransitToSpinning();
+  }
+  return is_spinning_;
+}
+
+void Worker::TransitFromSpinning() {
+  if (!is_spinning_) {
+    return;
+  }
+
+  is_spinning_ = false;
+  if (host_.coordinator_.TransitFromSpinning()) {
+    host_.coordinator_.Notify();
+  }
+}
+
+bool Worker::TransitToParked() {
+  if (local_tasks_.HasItems()) {
+    return false;
+  }
+
+  auto is_last_spinning =
+      host_.coordinator_.TransitToParked(this, is_spinning_);
+  is_spinning_ = false;
+
+  if (is_last_spinning && CheckBeforePark()) {
+    host_.coordinator_.Notify();
+  }
+
+  return true;
+}
+
+bool Worker::TransitFromParked() {
+  is_spinning_ = true;
+  return true;
 }
 
 }  // namespace exe::executors::tp::fast

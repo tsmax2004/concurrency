@@ -30,7 +30,6 @@ class Worker {
   Worker(ThreadPool& host, size_t index);
 
   void Start();
-  void Stop();
   void Join();
 
   // Single producer
@@ -65,7 +64,7 @@ class Worker {
 
   // Use in PickTask
   TaskBase* TryPickTask();
-  TaskBase* TryPickTaskBeforePark();
+  bool CheckBeforePark();
 
   // Or park thread
   TaskBase* PickTask();
@@ -74,6 +73,13 @@ class Worker {
   void Work();
 
  private:
+  void Park();
+
+  bool TransitToSpinning();
+  void TransitFromSpinning();
+  bool TransitToParked();
+  bool TransitFromParked();
+
   ThreadPool& host_;
   const size_t index_;
 
@@ -98,8 +104,8 @@ class Worker {
   // Temp buffer for tasks
   IntrusiveTask* tmp_buf_[kLocalQueueCapacity];
 
-  // Flag for join
-  twist::ed::stdlike::atomic<bool> is_end_{false};
+  // Flag for parking mechanism
+  bool is_spinning_{false};
 
   WorkerMetrics metrics_;
 };

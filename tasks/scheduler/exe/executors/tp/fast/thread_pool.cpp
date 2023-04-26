@@ -3,7 +3,8 @@
 namespace exe::executors::tp::fast {
 
 ThreadPool::ThreadPool(size_t threads)
-    : threads_(threads) {
+    : threads_(threads),
+      coordinator_(threads_) {
   for (size_t i = 0; i < threads; ++i) {
     workers_.emplace_back(*this, i);
   }
@@ -25,7 +26,8 @@ void ThreadPool::Submit(TaskBase* task) {
   } else {
     global_tasks_.Push(task);
   }
-  coordinator_.WakeOne();
+
+  coordinator_.Notify();
 }
 
 void ThreadPool::WaitIdle() {
@@ -33,10 +35,7 @@ void ThreadPool::WaitIdle() {
 }
 
 void ThreadPool::Stop() {
-  for (auto& worker : workers_) {
-    worker.Stop();
-  }
-
+  is_stopped_.store(true);
   coordinator_.WakeAll();
 
   for (auto& worker : workers_) {

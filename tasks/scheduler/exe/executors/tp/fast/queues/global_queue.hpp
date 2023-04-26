@@ -5,6 +5,7 @@
 #include <wheels/intrusive/forward_list.hpp>
 
 #include <twist/ed/stdlike/mutex.hpp>
+#include <twist/ed/stdlike/atomic.hpp>
 
 #include <span>
 
@@ -17,6 +18,7 @@ class GlobalQueue {
   void Push(IntrusiveTask* item) {
     std::lock_guard guard(mutex_);
     list_.PushBack(item);
+    size_.fetch_add(1);
   }
 
   void Offload(std::span<IntrusiveTask*> buffer) {
@@ -27,11 +29,17 @@ class GlobalQueue {
 
     std::lock_guard guard(mutex_);
     list_.Append(tmp_list);
+    size_.fetch_add(buffer.size());
   }
 
   // Returns nullptr if queue is empty
   IntrusiveTask* TryPop() {
     std::lock_guard guard(mutex_);
+    if (size_.load() == 0) {
+      return nullptr;
+    }
+
+    size_.fetch_sub(1);
     return list_.PopFront();
   }
 
@@ -47,12 +55,19 @@ class GlobalQueue {
     for (size_t i = 0; i < sz; ++i) {
       out_buffer[i] = list_.PopFront();
     }
+
+    size_.fetch_sub(sz);
     return sz;
+  }
+
+  bool HasItems() {
+    return size_.load() > 0;
   }
 
  private:
   twist::ed::stdlike::mutex mutex_;
   wheels::IntrusiveForwardList<IntrusiveTask> list_;
+  twist::ed::stdlike::atomic<size_t> size_;
 };
 
 }  // namespace exe::executors::tp::fast

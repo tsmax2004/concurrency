@@ -23,9 +23,10 @@ class WorkStealingQueue {
 
   bool TryPush(IntrusiveTask* item) {
     IntrusiveTask* expected = nullptr;
-    if (!buffer_[tail_ % Capacity].item.compare_exchange_strong(
-            expected, item, std::memory_order_relaxed,
-            std::memory_order_relaxed)) {
+    if (!buffer_[tail_.load(std::memory_order_relaxed) % Capacity]
+             .item.compare_exchange_strong(expected, item,
+                                           std::memory_order_relaxed,
+                                           std::memory_order_relaxed)) {
       return false;
     }
 
@@ -36,9 +37,11 @@ class WorkStealingQueue {
   // For grabbing from global queue / for stealing
   // Should always succeed
   void PushMany(std::span<TaskBase*> buffer) {
-    for (size_t i = 0; i < buffer.size(); ++i) {
-      buffer_[tail_ % Capacity].item.store(buffer[i],
-                                           std::memory_order_relaxed);
+    auto start = tail_.load(std::memory_order_relaxed);
+    auto finish = start + buffer.size();
+    for (size_t current_tail = start; current_tail < finish; ++current_tail) {
+      buffer_[current_tail % Capacity].item.store(buffer[current_tail - start],
+                                                  std::memory_order_relaxed);
       tail_.fetch_add(1, std::memory_order_release);
     }
 
@@ -84,6 +87,10 @@ class WorkStealingQueue {
   size_t Size() {
     return tail_.load(std::memory_order_acquire) -
            head_.load(std::memory_order_relaxed);
+  }
+
+  bool HasItems() {
+    return Size() > 0;
   }
 
  private:

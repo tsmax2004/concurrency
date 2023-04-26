@@ -8,6 +8,8 @@
 #include <exe/executors/tp/fast/metrics.hpp>
 #include <exe/executors/tp/fast/task_counter.hpp>
 
+#include <twist/ed/stdlike/atomic.hpp>
+
 // random_device
 #include <twist/ed/stdlike/random.hpp>
 
@@ -51,6 +53,7 @@ class ThreadPool : public IExecutor {
   Coordinator coordinator_;
   GlobalQueue global_tasks_;
   twist::ed::stdlike::random_device random_;
+  twist::ed::stdlike::atomic<bool> is_stopped_{false};
 };
 
 }  // namespace exe::executors::tp::fast
