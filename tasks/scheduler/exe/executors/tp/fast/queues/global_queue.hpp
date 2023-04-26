@@ -67,7 +67,7 @@ class GlobalQueue {
  private:
   twist::ed::stdlike::mutex mutex_;
   wheels::IntrusiveForwardList<IntrusiveTask> list_;
-  twist::ed::stdlike::atomic<size_t> size_;
+  twist::ed::stdlike::atomic<size_t> size_{0};
 };
 
 }  // namespace exe::executors::tp::fast
