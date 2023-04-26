@@ -69,10 +69,14 @@ void Worker::Push(TaskBase* task, SchedulerHint hint) {
   }
   lifo_streak_ = 0;
 
-  if (hint == SchedulerHint::UpToYou && PushToLocalQueue(task)) {
+  if (hint == SchedulerHint::OtherThread) {
+    host_.global_tasks_.Push(task);
     return;
   }
 
+  if (hint == SchedulerHint::UpToYou && PushToLocalQueue(task)) {
+    return;
+  }
   OffloadTasksToGlobalQueue(task);
 }
 
