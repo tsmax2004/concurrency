@@ -129,7 +129,7 @@ bool Worker::CheckBeforePark() {
 }
 
 bool Worker::HasWork() {
-  return lifo_slot_ != nullptr || local_tasks_.HasItems();
+  return local_tasks_.HasItems();
 }
 
 size_t Worker::StealTasks(std::span<TaskBase*> out_buffer) {
