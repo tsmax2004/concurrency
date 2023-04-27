@@ -64,28 +64,36 @@ class Mutex {
     }
 
     bool AwaitSuspend(FiberHandle fiber) {
-      fiber_ = fiber;
-      if (mutex_.in_contention_) {
-        mutex_.releasing_awaiter_ = this;
-        return true;
+      auto next = mutex_.waiting_queue_.Pop();
+      if (next == nullptr) {
+        return false;
       }
-
-      Mutex& mutex = mutex_;
-      auto releasing_awaiter = this;
-      LockAwaiter* next;
-
-      while ((next = mutex.waiting_queue_.Pop()) != nullptr) {
-        releasing_awaiter->fiber_.Schedule();
-
-        mutex.in_contention_ = true;
-        next->fiber_.Switch();
-        mutex.in_contention_ = false;
-
-        releasing_awaiter = mutex.releasing_awaiter_;
-      }
-
-      releasing_awaiter->fiber_.Switch();
+      fiber.Schedule();
+      next->fiber_.Schedule(executors::SchedulerHint::Next);
       return true;
+
+      //      fiber_ = fiber;
+      //      if (mutex_.in_contention_) {
+      //        mutex_.releasing_awaiter_ = this;
+      //        return true;
+      //      }
+      //
+      //      Mutex& mutex = mutex_;
+      //      auto releasing_awaiter = this;
+      //      LockAwaiter* next;
+      //
+      //      while ((next = mutex.waiting_queue_.Pop()) != nullptr) {
+      //        releasing_awaiter->fiber_.Schedule();
+      //
+      //        mutex.in_contention_ = true;
+      //        next->fiber_.Switch();
+      //        mutex.in_contention_ = false;
+      //
+      //        releasing_awaiter = mutex.releasing_awaiter_;
+      //      }
+      //
+      //      releasing_awaiter->fiber_.Switch();
+      //      return true;
     }
 
    private:
@@ -94,8 +102,8 @@ class Mutex {
   };
 
   support::WaitingQueue<LockAwaiter> waiting_queue_;
-  bool in_contention_{false};
-  UnlockAwaiter* releasing_awaiter_{nullptr};
+  //  bool in_contention_{false};
+  //  UnlockAwaiter* releasing_awaiter_{nullptr};
 };
 
 }  // namespace exe::fibers
