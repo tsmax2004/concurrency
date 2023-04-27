@@ -27,7 +27,6 @@ void Worker::Work() {
     TransitFromSpinning();
 
     task->Run();
-    host_.task_counter_.Done();
   }
 }
 

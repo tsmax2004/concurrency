@@ -25,7 +25,6 @@ void ThreadPool::Submit(TaskBase* task) {
 
 void ThreadPool::Submit(exe::executors::IntrusiveTask* task,
                         exe::executors::SchedulerHint hint) {
-  task_counter_.Add(1);
   if (MyWorker(Worker::Current())) {
     Worker::Current()->Push(task, hint);
   } else {
@@ -33,10 +32,6 @@ void ThreadPool::Submit(exe::executors::IntrusiveTask* task,
   }
 
   coordinator_.Notify();
-}
-
-void ThreadPool::WaitIdle() {
-  task_counter_.Wait();
 }
 
 void ThreadPool::Stop() {

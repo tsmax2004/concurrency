@@ -36,8 +36,6 @@ class ThreadPool : public IExecutor {
   void Submit(IntrusiveTask*) override;
   void Submit(IntrusiveTask*, SchedulerHint) override;
 
-  void WaitIdle();
-
   void Stop();
 
   // After Stop
@@ -50,7 +48,6 @@ class ThreadPool : public IExecutor {
 
   const size_t threads_;
   std::deque<Worker> workers_;
-  TaskCounter task_counter_;
   Coordinator coordinator_;
   GlobalQueue global_tasks_;
   twist::ed::stdlike::random_device random_;
