@@ -64,7 +64,7 @@ bool Coordinator::TransitToParked(Worker* worker, bool is_spinning) {
   if (is_spinning) {
     return num_spinning_.fetch_sub(1) == 1;
   }
-  return num_spinning_ == 0;
+  return false;
 }
 
 bool Coordinator::ShouldWake() {
