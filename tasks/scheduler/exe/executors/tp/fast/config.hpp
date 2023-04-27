@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stddef.h>
+
 namespace exe::executors::tp::fast::config {
 
 #if !defined(TWIST_FAULTY)
