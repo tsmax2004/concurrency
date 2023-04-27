@@ -15,88 +15,35 @@ namespace exe::executors::tp::fast {
 
 class Coordinator {
  public:
-  explicit Coordinator(size_t threads)
-      : num_workers_(threads) {
-    parked_workers_.reserve(num_workers_);
-  }
+  explicit Coordinator(size_t threads);
 
   // Wake parked worker if there is no spinning worker
-  void Notify() {
-    auto worker = WorkerToWake();
-    if (worker == nullptr) {
-      return;
-    }
-    worker->Wake();
-  }
+  void Notify();
 
-  // Return worker that can be unparked
-  // (return nullptr if there is no parked workers or there is spinning worker)
-  Worker* WorkerToWake() {
-    if (!ShouldWake()) {
-      return nullptr;
-    }
-
-    std::lock_guard guard(mutex_);
-    if (!ShouldWake()) {
-      return nullptr;
-    }
-
-    auto worker = parked_workers_.back();
-    parked_workers_.pop_back();
-    num_unparked_.fetch_add(1);
-    num_spinning_.fetch_add(1);
-
-    return worker;
-  }
-
-  // Unpark all workers, need in Stop()
-  void WakeAll() {
-    std::lock_guard guard(mutex_);
-    num_unparked_.store(num_workers_);
-    for (auto worker : parked_workers_) {
-      worker->Wake();
-    }
-  }
+  // Unpark all workers (e.g. for Stop())
+  void WakeAll();
 
   // Call when worker is starting stealing
   // Return false if it shouldn't steal because of optimization
   // (a lot of workers shouldn't steal at the same time)
-  bool TransitToSpinning() {
-    if (2 * num_spinning_.load() >= num_workers_) {
-      return false;
-    }
+  bool TransitToSpinning();
 
-    // We don't use sync because it's not critical if optimization fail
-    num_spinning_.fetch_add(1);
-    return true;
-  }
-
-  // Call when worker stole a work
+  // Call when worker is finishing stealing
   // Return true if this worker is last spinning
   // (in this case it can call Notify to unpark worker)
-  bool TransitFromSpinning() {
-    return num_spinning_.fetch_sub(1) == 1;
-  }
+  bool TransitFromSpinning();
 
   // Call when worker didn't find work
   // Return true if this worker is last spinning, and
   // he needs to check all queues again
-  bool TransitToParked(Worker* worker, bool is_spinning) {
-    std::lock_guard guard(mutex_);
-
-    parked_workers_.push_back(worker);
-    num_unparked_.fetch_sub(1);
-
-    if (is_spinning) {
-      return num_spinning_.fetch_sub(1) == 1;
-    }
-    return false;
-  }
+  bool TransitToParked(Worker* worker, bool is_spinning);
 
  private:
-  bool ShouldWake() {
-    return num_spinning_.load() == 0 && num_unparked_.load() < num_workers_;
-  }
+  // Return worker that can be unparked
+  // (return nullptr if there is no parked workers or there is spinning worker)
+  Worker* WorkerToWake();
+
+  bool ShouldWake();
 
   const size_t num_workers_;
 

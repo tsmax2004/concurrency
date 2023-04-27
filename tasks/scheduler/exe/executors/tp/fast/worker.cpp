@@ -21,37 +21,35 @@ void Worker::Start() {
   });
 }
 
-void Worker::Work() {
-  IntrusiveTask* task;
-  while ((task = PickTask()) != nullptr) {
-    TransitFromSpinning();
-
-    task->Run();
-  }
-}
-
-void Worker::Park() {
-  wakeups_.store(1);
-
-  if (!TransitToParked()) {
-    wakeups_.store(0);
-    return;
-  }
-
-  do {
-    if (!host_.is_stopped_.load()) {
-      twist::ed::Wait(wakeups_, 1);
-    }
-  } while (!TransitFromParked());
+void Worker::Stop() {
+  is_stopped_.store(true);
 }
 
 void Worker::Join() {
   thread_->join();
 }
 
+void Worker::Work() {
+  IntrusiveTask* task;
+  while ((task = PickTask()) != nullptr) {
+    TransitFromSpinning();
+    task->Run();
+  }
+}
+
+void Worker::Park() {
+  if (!TransitToParked()) {
+    return;
+  }
+
+  do {
+    twist::ed::Wait(is_parked_, 1);
+  } while (!TransitFromParked());
+}
+
 void Worker::Wake() {
-  auto key = twist::ed::PrepareWake(wakeups_);
-  wakeups_.store(0);
+  auto key = twist::ed::PrepareWake(is_parked_);
+  is_parked_.store(0);
   twist::ed::WakeOne(key);
 }
 
@@ -60,7 +58,7 @@ Worker* Worker::Current() {
 }
 
 void Worker::Push(TaskBase* task, SchedulerHint hint) {
-  static const size_t kLifoMaxStreak = 64;
+  using config::kLifoMaxStreak;
 
   if (hint == SchedulerHint::Next && ++lifo_streak_ < kLifoMaxStreak) {
     PushToLifoSlot(task);
@@ -89,20 +87,19 @@ IntrusiveTask* Worker::PickTask() {
   // Then
   //   Park worker
 
-  static const size_t kGlobalQueueGrabFrequency = 61;
+  using config::kGlobalQueueGrabFrequency;
 
-  while (!host_.is_stopped_.load()) {
+  while (!is_stopped_.load()) {
     IntrusiveTask* task;
 
-    if (++pick_tick_ % kGlobalQueueGrabFrequency == 0) {
-      if ((task = TryGrabTasksFromGlobalQueue()) != nullptr) {
-        return task;
-      }
+    if (++pick_tick_ % kGlobalQueueGrabFrequency == 0 &&
+        (task = TryGrabTasksFromGlobalQueue()) != nullptr) {
+      return task;
     }
     if ((task = TryPickTaskFromLifoSlot()) != nullptr) {
       return task;
     }
-    if ((task = TryPickTask()) != nullptr) {
+    if ((task = TryPickTaskFromLocalQueue()) != nullptr) {
       return task;
     }
     if ((task = TryGrabTasksFromGlobalQueue()) != nullptr) {
@@ -123,12 +120,16 @@ bool Worker::CheckBeforePark() {
     return true;
   }
   for (auto& worker : host_.workers_) {
-    if (worker.local_tasks_.HasItems()) {
+    if (worker.HasWork()) {
       return true;
     }
   }
 
   return false;
+}
+
+bool Worker::HasWork() {
+  return lifo_slot_ != nullptr || local_tasks_.HasItems();
 }
 
 size_t Worker::StealTasks(std::span<TaskBase*> out_buffer) {
@@ -153,7 +154,7 @@ void Worker::OffloadTasksToGlobalQueue(IntrusiveTask* overflow) {
   host_.global_tasks_.Offload(std::span(tmp_buf_, sz + 1));
 }
 
-IntrusiveTask* Worker::TryPickTask() {
+IntrusiveTask* Worker::TryPickTaskFromLocalQueue() {
   return local_tasks_.TryPop();
 }
 
@@ -164,7 +165,7 @@ IntrusiveTask* Worker::TryPickTaskFromLifoSlot() {
 }
 
 IntrusiveTask* Worker::TryStealTasks() {
-  static const auto kTaskToSteal = kLocalQueueCapacity / host_.threads_;
+  const auto k_task_to_steal = kLocalQueueCapacity / host_.threads_;
 
   if (!TransitToSpinning()) {
     return nullptr;
@@ -172,15 +173,15 @@ IntrusiveTask* Worker::TryStealTasks() {
 
   std::uniform_int_distribution<int> uniform_dist(0, host_.threads_ - 1);
   auto start = uniform_dist(twister_);
-  size_t stolen = 0;
 
+  size_t stolen = 0;
   for (size_t i = 0; i < host_.threads_ && stolen == 0; ++i) {
     auto& worker = host_.workers_[(start + i) % host_.threads_];
     if (&worker == this) {
       continue;
     }
 
-    stolen = worker.StealTasks(std::span(tmp_buf_, kTaskToSteal));
+    stolen = worker.StealTasks(std::span(tmp_buf_, k_task_to_steal));
   }
 
   if (stolen == 0) {
@@ -223,7 +224,9 @@ void Worker::TransitFromSpinning() {
 }
 
 bool Worker::TransitToParked() {
-  if (local_tasks_.HasItems()) {
+  is_parked_.store(1);
+  if (is_stopped_.load() || HasWork()) {
+    is_parked_.store(0);
     return false;
   }
 

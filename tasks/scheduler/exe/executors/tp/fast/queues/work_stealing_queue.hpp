@@ -44,13 +44,6 @@ class WorkStealingQueue {
                                                   std::memory_order_relaxed);
       tail_.fetch_add(1, std::memory_order_release);
     }
-
-    //    auto crt_tail = tail_.load(std::memory_order_relaxed);
-    //    for (size_t i = crt_tail; i < crt_tail + buffer.size(); ++i) {
-    //      buffer_[i % Capacity].item.store(buffer[i],
-    //      std::memory_order_relaxed);
-    //    }
-    //    tail_.fetch_add(buffer.size(), std::memory_order_release);
   }
 
   // Multiple consumers
@@ -75,8 +68,7 @@ class WorkStealingQueue {
                                           std::memory_order_relaxed)) {
       grab_size = std::min(out_buffer.size(), Size());
     }
-    if (buffer_[grab_head % Capacity].item.load(std::memory_order_relaxed) ==
-        nullptr) {
+    if (grab_size == 0) {
       return 0;
     }
 

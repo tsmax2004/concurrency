@@ -17,6 +17,7 @@ void ThreadPool::Start() {
 }
 
 ThreadPool::~ThreadPool() {
+  WHEELS_ASSERT(is_stopped_, "ThreadPool was not stopped!");
 }
 
 void ThreadPool::Submit(TaskBase* task) {
@@ -35,7 +36,12 @@ void ThreadPool::Submit(exe::executors::IntrusiveTask* task,
 }
 
 void ThreadPool::Stop() {
-  is_stopped_.store(true);
+  is_stopped_ = true;
+
+  for (auto& worker : workers_) {
+    worker.Stop();
+  }
+
   coordinator_.WakeAll();
 
   for (auto& worker : workers_) {

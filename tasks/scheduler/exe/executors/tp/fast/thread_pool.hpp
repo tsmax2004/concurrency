@@ -51,7 +51,7 @@ class ThreadPool : public IExecutor {
   Coordinator coordinator_;
   GlobalQueue global_tasks_;
   twist::ed::stdlike::random_device random_;
-  twist::ed::stdlike::atomic<bool> is_stopped_{false};
+  bool is_stopped_{false};
 };
 
 }  // namespace exe::executors::tp::fast

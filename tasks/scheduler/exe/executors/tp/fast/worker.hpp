@@ -5,6 +5,7 @@
 
 #include <exe/executors/tp/fast/queues/work_stealing_queue.hpp>
 #include <exe/executors/tp/fast/metrics.hpp>
+#include <exe/executors/tp/fast/config.hpp>
 
 #include <twist/ed/stdlike/atomic.hpp>
 #include <twist/ed/stdlike/thread.hpp>
@@ -19,17 +20,13 @@ namespace exe::executors::tp::fast {
 class ThreadPool;
 
 class Worker {
- private:
-#if !defined(TWIST_FAULTY)
-  static const size_t kLocalQueueCapacity = 256;
-#else
-  static const size_t kLocalQueueCapacity = 17;
-#endif
+  static const size_t kLocalQueueCapacity = config::kLocalQueueCapacity;
 
  public:
   explicit Worker(ThreadPool& host);
 
   void Start();
+  void Stop();
   void Join();
 
   // Single producer
@@ -52,29 +49,30 @@ class Worker {
   }
 
  private:
+  // Run Loop
+  void Work();
+
   // Use in Push
   void PushToLifoSlot(IntrusiveTask* task);
   bool PushToLocalQueue(IntrusiveTask* task);
   void OffloadTasksToGlobalQueue(IntrusiveTask* overflow);
 
-  // Use in TryPickTask
+  IntrusiveTask* PickTask();
+
+  // Use in PickTask
+  IntrusiveTask* TryPickTaskFromLocalQueue();
   IntrusiveTask* TryPickTaskFromLifoSlot();
   IntrusiveTask* TryStealTasks();
   IntrusiveTask* TryGrabTasksFromGlobalQueue();
 
-  // Use in PickTask
-  TaskBase* TryPickTask();
+  // Check for not tracked work if we are last spinning worker
   bool CheckBeforePark();
+  bool HasWork();
 
   // Or park thread
-  TaskBase* PickTask();
-
-  // Run Loop
-  void Work();
-
- private:
   void Park();
 
+  // For parking mechanism
   bool TransitToSpinning();
   void TransitFromSpinning();
   bool TransitToParked();
@@ -101,13 +99,15 @@ class Worker {
   std::mt19937_64 twister_;
 
   // Parking lot
-  twist::ed::stdlike::atomic<uint32_t> wakeups_{0};
+  twist::ed::stdlike::atomic<uint32_t> is_parked_{0};
 
   // Temp buffer for tasks
   IntrusiveTask* tmp_buf_[kLocalQueueCapacity];
 
   // Flag for parking mechanism
   bool is_spinning_{false};
+
+  twist::ed::stdlike::atomic<bool> is_stopped_{false};
 
   WorkerMetrics metrics_;
 };
