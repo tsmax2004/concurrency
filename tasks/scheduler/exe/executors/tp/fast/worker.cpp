@@ -225,7 +225,7 @@ void Worker::TransitFromSpinning() {
 
 bool Worker::TransitToParked() {
   is_parked_.store(1);
-  if (is_stopped_.load() || HasWork()) {
+  if (is_stopped_.load()) {
     is_parked_.store(0);
     return false;
   }
