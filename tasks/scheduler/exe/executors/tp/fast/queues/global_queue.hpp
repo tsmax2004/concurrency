@@ -64,6 +64,10 @@ class GlobalQueue {
     return size_.load() > 0;
   }
 
+  size_t Size() {
+    return size_.load();
+  }
+
  private:
   twist::ed::stdlike::mutex mutex_;
   wheels::IntrusiveForwardList<IntrusiveTask> list_;
