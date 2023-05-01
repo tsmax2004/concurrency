@@ -17,6 +17,9 @@ class Coordinator {
  public:
   explicit Coordinator(size_t threads);
 
+  // Wait until all workers park
+  void WaitIdle();
+
   // Wake parked worker if there is no spinning worker
   void Notify();
 
@@ -35,8 +38,11 @@ class Coordinator {
 
   // Call when worker didn't find work
   // Return true if this worker is last spinning, and
-  // he needs to check all queues again
+  // he needs to check all queues again and call ConfirmPark
   bool TransitToParked(Worker* worker, bool is_spinning);
+
+  // Call when last spinning parking worker ends check
+  void ConfirmPark();
 
  private:
   // Return worker that can be unparked
@@ -45,13 +51,18 @@ class Coordinator {
 
   bool ShouldWake();
 
-  const size_t num_workers_;
+  const uint32_t num_workers_;
 
   std::vector<Worker*> parked_workers_;  // guarded by mutex
   twist::ed::stdlike::mutex mutex_;
 
-  twist::ed::stdlike::atomic<size_t> num_unparked_{num_workers_};
-  twist::ed::stdlike::atomic<size_t> num_spinning_{0};
+  // Counters
+  // Note: num_parked_ need for wait idle,
+  // and it is not always num_workers_ - num_unparked_
+  // (because if parking worker is last spinning he must check all queues)
+  twist::ed::stdlike::atomic<uint32_t> num_unparked_{num_workers_};
+  twist::ed::stdlike::atomic<uint32_t> num_parked_{0};
+  twist::ed::stdlike::atomic<uint32_t> num_spinning_{0};
 };
 
 }  // namespace exe::executors::tp::fast

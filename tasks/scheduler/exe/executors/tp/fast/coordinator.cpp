@@ -1,10 +1,20 @@
 #include <exe/executors/tp/fast/coordinator.hpp>
 
+#include <twist/ed/wait/sys.hpp>
+
 namespace exe::executors::tp::fast {
 
 Coordinator::Coordinator(size_t threads)
     : num_workers_(threads) {
   parked_workers_.reserve(num_workers_);
+}
+
+void Coordinator::WaitIdle() {
+  auto old = num_parked_.load();
+  while (old != num_workers_) {
+    twist::ed::Wait(num_parked_, old);
+    old = num_parked_.load();
+  }
 }
 
 void Coordinator::Notify() {
@@ -21,6 +31,7 @@ Worker* Coordinator::WorkerToWake() {
   }
 
   std::lock_guard guard(mutex_);
+
   if (!ShouldWake()) {
     return nullptr;
   }
@@ -29,6 +40,7 @@ Worker* Coordinator::WorkerToWake() {
   parked_workers_.pop_back();
   num_unparked_.fetch_add(1);
   num_spinning_.fetch_add(1);
+  num_parked_.fetch_sub(1);
 
   return worker;
 }
@@ -36,6 +48,7 @@ Worker* Coordinator::WorkerToWake() {
 void Coordinator::WakeAll() {
   std::lock_guard guard(mutex_);
   num_unparked_.store(num_workers_);
+  num_parked_.store(0);
   for (auto worker : parked_workers_) {
     worker->Wake();
   }
@@ -60,11 +73,19 @@ bool Coordinator::TransitToParked(Worker* worker, bool is_spinning) {
 
   parked_workers_.push_back(worker);
   num_unparked_.fetch_sub(1);
-
-  if (is_spinning) {
-    return num_spinning_.fetch_sub(1) == 1;
+  if (is_spinning && num_spinning_.fetch_sub(1) == 1) {
+    return true;
   }
+
+  ConfirmPark();
   return false;
+}
+
+void Coordinator::ConfirmPark() {
+  auto key = twist::ed::PrepareWake(num_parked_);
+  if (num_parked_.fetch_add(1) == num_workers_ - 1) {
+    twist::ed::WakeAll(key);
+  }
 }
 
 bool Coordinator::ShouldWake() {

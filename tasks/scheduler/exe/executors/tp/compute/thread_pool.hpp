@@ -38,6 +38,7 @@ class ThreadPool : public executors::IExecutor {
 
   // Schedules task for execution in one of the worker threads
   void Submit(IntrusiveTask*);
+  void Submit(IntrusiveTask*, SchedulerHint);
 
   // Locates current thread pool from worker thread
   static ThreadPool* Current();

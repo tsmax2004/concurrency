@@ -35,6 +35,10 @@ void ThreadPool::Submit(exe::executors::IntrusiveTask* task,
   coordinator_.Notify();
 }
 
+void ThreadPool::WaitIdle() {
+  coordinator_.WaitIdle();
+}
+
 void ThreadPool::Stop() {
   is_stopped_ = true;
 

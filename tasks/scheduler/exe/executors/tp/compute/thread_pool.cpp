@@ -31,6 +31,10 @@ void ThreadPool::Submit(IntrusiveTask* task) {
   task_queue_.Put(task);
 }
 
+void ThreadPool::Submit(IntrusiveTask* task, SchedulerHint) {
+  Submit(task);
+}
+
 ThreadPool* ThreadPool::Current() {
   return pool;
 }

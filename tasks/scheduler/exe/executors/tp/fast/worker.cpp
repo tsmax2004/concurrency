@@ -234,8 +234,11 @@ bool Worker::TransitToParked() {
       host_.coordinator_.TransitToParked(this, is_spinning_);
   is_spinning_ = false;
 
-  if (is_last_spinning && CheckBeforePark()) {
-    host_.coordinator_.Notify();
+  if (is_last_spinning) {
+    if (CheckBeforePark()) {
+      host_.coordinator_.Notify();
+    }
+    host_.coordinator_.ConfirmPark();
   }
 
   return true;
