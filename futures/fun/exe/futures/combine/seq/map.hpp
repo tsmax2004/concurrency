@@ -29,11 +29,7 @@ struct [[nodiscard]] Map {
 
     producer.Consume([promise = std::move(promise),
                       fun = std::move(fun)](Result<T> result) mutable {
-      if (result.has_value()) {
-        std::move(promise).SetValue(fun(std::move(result.value())));
-      } else {
-        std::move(promise).SetError(std::move(result.error()));
-      }
+      std::move(promise).Set(result.map(std::move(fun)));
     });
 
     return std::move(consumer);

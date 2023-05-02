@@ -10,6 +10,7 @@ namespace pipe {
 struct [[nodiscard]] Detach {
   template <typename T>
   void Pipe(Future<T> f) {
+    f.Via(executors::Inline());
     f.Consume([](Result<T>) {});
   }
 };

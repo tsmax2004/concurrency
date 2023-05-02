@@ -50,10 +50,12 @@ Future<T> First(Future<T> f1, Future<T> f2) {
   auto [f, p] = Contract<T>();
   auto finish = new FirstFinish<T>(std::move(p));
 
+  f1.Via(executors::Inline());
   std::move(f1).Consume([finish](Result<T> result) mutable {
     finish->With(std::move(result));
   });
 
+  f2.Via(executors::Inline());
   std::move(f2).Consume([finish](Result<T> result) mutable {
     finish->With(std::move(result));
   });

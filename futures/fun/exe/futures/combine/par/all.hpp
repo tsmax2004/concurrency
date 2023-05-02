@@ -59,10 +59,12 @@ Future<std::tuple<X, Y>> Both(Future<X> f1, Future<Y> f2) {
   auto [f, p] = Contract<std::tuple<X, Y>>();
   auto finish = new BothFinish<X, Y>(std::move(p));
 
+  f1.Via(executors::Inline());
   std::move(f1).Consume([finish](Result<X> result) mutable {
     finish->With(std::move(result), 0);
   });
 
+  f2.Via(executors::Inline());
   std::move(f2).Consume([finish](Result<Y> result) mutable {
     finish->With(std::move(result), 1);
   });

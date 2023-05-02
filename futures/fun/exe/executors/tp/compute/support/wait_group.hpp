@@ -1,7 +1,7 @@
 #include <twist/ed/stdlike/mutex.hpp>
 #include <twist/ed/stdlike/condition_variable.hpp>
 
-namespace exe::executors::tp::compute {
+namespace exe::executors::tp::compute::support {
 
 class WaitGroup {
  public:
@@ -30,4 +30,4 @@ class WaitGroup {
   int counter_{0};
 };
 
-}  // namespace exe::executors::tp::compute
+}  // namespace exe::executors::tp::compute::support

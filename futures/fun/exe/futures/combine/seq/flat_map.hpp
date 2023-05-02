@@ -2,6 +2,7 @@
 
 #include <exe/futures/combine/seq/map.hpp>
 #include <exe/futures/combine/seq/flatten.hpp>
+#include <exe/futures/combine/seq/via.hpp>
 
 #include <exe/futures/syntax/pipe.hpp>
 
@@ -26,7 +27,9 @@ struct [[nodiscard]] FlatMap {
 
   template <typename T>
   Future<U<T>> Pipe(Future<T> future) {
-    return std::move(future) | Map(std::move(fun)) | Flatten();
+    auto& exe = future.GetExecutor();
+    return std::move(future) | Map(std::move(fun)) | Via(executors::Inline()) |
+           Flatten() | Via(exe);
   }
 };
 

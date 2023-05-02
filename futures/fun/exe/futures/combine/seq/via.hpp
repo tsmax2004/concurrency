@@ -11,6 +11,10 @@ namespace pipe {
 struct [[nodiscard]] Via {
   executors::IExecutor& executor;
 
+  Via(executors::IExecutor& exe)
+      : executor(exe) {
+  }
+
   template <typename T>
   Future<T> Pipe(Future<T> f) {
     f.Via(executor);

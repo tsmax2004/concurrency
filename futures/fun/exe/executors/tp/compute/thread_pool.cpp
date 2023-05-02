@@ -4,6 +4,8 @@
 
 #include <wheels/core/panic.hpp>
 
+#include <exe/executors/submit.hpp>
+
 namespace exe::executors::tp::compute {
 
 static twist::ed::ThreadLocalPtr<ThreadPool> pool;
@@ -28,6 +30,10 @@ void ThreadPool::Submit(IntrusiveTask* task) {
   tasks_wg_.Add(1);
   task_queue_.Put(task);
 }
+
+// void ThreadPool::Submit(IntrusiveTask* task, SchedulerHint) {
+//   Submit(task);
+// }
 
 ThreadPool* ThreadPool::Current() {
   return pool;

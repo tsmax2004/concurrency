@@ -1,12 +1,11 @@
 #pragma once
 
+#include <wheels/intrusive/forward_list.hpp>
 #include <twist/ed/stdlike/mutex.hpp>
 #include <twist/ed/stdlike/condition_variable.hpp>
 #include <exe/executors/task.hpp>
 
-#include <optional>
-
-namespace exe::executors::tp::compute {
+namespace exe::executors::tp::compute::support {
 
 // Unbounded blocking multi-producers/multi-consumers (MPMC) queue
 // for intrusive tasks
@@ -56,4 +55,4 @@ class IntrusiveUnboundedBlockingQueue {
   bool is_closed_{false};
 };
 
-}  // namespace exe::executors::tp::compute
+}  // namespace exe::executors::tp::compute::support
