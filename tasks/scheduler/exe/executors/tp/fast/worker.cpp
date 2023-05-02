@@ -224,10 +224,6 @@ void Worker::TransitFromSpinning() {
 
 bool Worker::TransitToParked() {
   is_parked_.store(1);
-  if (is_stopped_.load()) {
-    is_parked_.store(0);
-    return false;
-  }
 
   auto is_last_spinning =
       host_.coordinator_.TransitToParked(this, is_spinning_);
@@ -238,6 +234,11 @@ bool Worker::TransitToParked() {
       host_.coordinator_.Notify();
     }
     host_.coordinator_.ConfirmPark();
+  }
+
+  if (is_stopped_.load()) {
+    is_parked_.store(0);
+    return false;
   }
 
   return true;
