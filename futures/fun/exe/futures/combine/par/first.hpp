@@ -2,6 +2,8 @@
 
 #include <twist/ed/stdlike/atomic.hpp>
 
+#include <memory>
+
 #include <exe/futures/types/future.hpp>
 #include <exe/futures/make/contract.hpp>
 
@@ -28,10 +30,6 @@ struct FirstFinish {
         std::move(promise_).Set(std::move(result));
       }
     }
-
-    if (prev_state != State::Init) {
-      delete this;
-    }
   }
 
  private:
@@ -48,7 +46,7 @@ struct FirstFinish {
 template <typename T>
 Future<T> First(Future<T> f1, Future<T> f2) {
   auto [f, p] = Contract<T>();
-  auto finish = new FirstFinish<T>(std::move(p));
+  auto finish = std::make_shared<FirstFinish<T>>(std::move(p));
 
   f1.Via(executors::Inline());
   std::move(f1).Consume([finish](Result<T> result) mutable {

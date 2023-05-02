@@ -3,6 +3,7 @@
 #include <exe/futures/types/future.hpp>
 
 #include <tuple>
+#include <memory>
 
 #include <exe/futures/types/future.hpp>
 #include <exe/futures/make/contract.hpp>
@@ -35,10 +36,6 @@ struct BothFinish {
         std::move(promise_).SetError(std::move(result.error()));
       }
     }
-
-    if (prev_state != State::Init) {
-      delete this;
-    }
   }
 
  private:
@@ -57,7 +54,7 @@ struct BothFinish {
 template <typename X, typename Y>
 Future<std::tuple<X, Y>> Both(Future<X> f1, Future<Y> f2) {
   auto [f, p] = Contract<std::tuple<X, Y>>();
-  auto finish = new BothFinish<X, Y>(std::move(p));
+  auto finish = std::make_shared<BothFinish<X, Y>>(std::move(p));
 
   f1.Via(executors::Inline());
   std::move(f1).Consume([finish](Result<X> result) mutable {
