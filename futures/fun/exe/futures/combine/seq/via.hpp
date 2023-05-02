@@ -11,7 +11,7 @@ namespace pipe {
 struct [[nodiscard]] Via {
   executors::IExecutor& executor;
 
-  Via(executors::IExecutor& exe)
+  explicit Via(executors::IExecutor& exe)
       : executor(exe) {
   }
 
