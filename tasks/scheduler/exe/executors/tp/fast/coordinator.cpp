@@ -18,11 +18,9 @@ void Coordinator::WaitIdle() {
 }
 
 void Coordinator::Notify() {
-  auto worker = WorkerToWake();
-  if (worker == nullptr) {
-    return;
+  if (auto worker = WorkerToWake()) {
+    worker->Wake();
   }
-  worker->Wake();
 }
 
 Worker* Coordinator::WorkerToWake() {

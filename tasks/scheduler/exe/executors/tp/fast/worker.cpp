@@ -30,8 +30,7 @@ void Worker::Join() {
 }
 
 void Worker::Work() {
-  IntrusiveTask* task;
-  while ((task = PickTask()) != nullptr) {
+  while (auto task = PickTask()) {
     TransitFromSpinning();
     task->Run();
   }
@@ -138,7 +137,9 @@ size_t Worker::StealTasks(std::span<TaskBase*> out_buffer) {
 
 void Worker::PushToLifoSlot(IntrusiveTask* task) {
   if (lifo_slot_ != nullptr) {
-    Push(lifo_slot_, SchedulerHint::UpToYou);
+    if (!PushToLocalQueue(lifo_slot_)) {
+      OffloadTasksToGlobalQueue(lifo_slot_);
+    }
   }
   lifo_slot_ = task;
 }
@@ -159,9 +160,7 @@ IntrusiveTask* Worker::TryPickTaskFromLocalQueue() {
 }
 
 IntrusiveTask* Worker::TryPickTaskFromLifoSlot() {
-  auto ret = lifo_slot_;
-  lifo_slot_ = nullptr;
-  return ret;
+  return std::exchange(lifo_slot_, nullptr);
 }
 
 IntrusiveTask* Worker::TryStealTasks() {

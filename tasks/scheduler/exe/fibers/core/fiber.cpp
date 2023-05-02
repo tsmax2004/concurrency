@@ -24,21 +24,22 @@ void Fiber::Switch() {
 }
 
 void Fiber::Run() noexcept {
-  Fiber* prev_fiber = current_fiber;
+  while (true) {
+    Fiber* prev_fiber = current_fiber;
 
-  current_fiber = this;
-  coroutine_.Resume();
-  current_fiber = prev_fiber;
+    current_fiber = this;
+    coroutine_.Resume();
+    current_fiber = prev_fiber;
 
-  if (coroutine_.IsCompleted()) {
-    delete this;
-    return;
+    if (coroutine_.IsCompleted()) {
+      delete this;
+      return;
+    }
+
+    if (awaiter_->AwaitSuspend(FiberHandle(this))) {
+      return;
+    }
   }
-
-  if (awaiter_->AwaitSuspend(FiberHandle(this))) {
-    return;
-  }
-  Run();
 }
 
 Fiber* Fiber::Self() {
