@@ -15,7 +15,7 @@ struct [[nodiscard]] Boxed : IConsumer<T> {
  public:
   // Auto-boxing
   template <Thunk Thunk>
-  explicit Boxed(Thunk thunk) {
+  Boxed(Thunk thunk) {  // NOLINT
     shared_state_ = new detail::BoxedSharedState(std::move(thunk));
   }
 
