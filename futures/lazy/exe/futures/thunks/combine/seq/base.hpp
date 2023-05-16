@@ -1,5 +1,7 @@
 #pragma once
 
+#include <optional>
+
 #include <exe/futures/model/thunk.hpp>
 
 namespace exe::futures::thunks {
