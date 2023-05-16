@@ -2,14 +2,22 @@
 
 #include <exe/futures/thunks/combine/seq/base.hpp>
 
+#include <exe/result/traits/value_of.hpp>
+
 namespace exe::futures::thunks {
 
-template <Thunk Producer, typename MapFun,
-          typename InputValueType = typename Producer::ValueType,
-          typename ValueTypeT = result::traits::ValueOf<
-              std::invoke_result_t<MapFun, InputValueType>>>
-struct [[nodiscard]] AndThen : SeqThunk<Producer, ValueTypeT> {
-  using ValueType = ValueTypeT;
+namespace traits {
+
+template <Thunk Producer, typename MapFun>
+using ValueTypeT = result::traits::ValueOf<
+    std::invoke_result_t<MapFun, typename Producer::ValueType>>;
+
+}  // namespace traits
+
+template <Thunk Producer, typename MapFun>
+struct [[nodiscard]] AndThen
+    : SeqThunk<Producer, traits::ValueTypeT<Producer, MapFun>> {
+  using ValueType = traits::ValueTypeT<Producer, MapFun>;
 
  public:
   AndThen(Producer p, MapFun f)

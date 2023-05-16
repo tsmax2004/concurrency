@@ -19,7 +19,7 @@ struct [[nodiscard]] NotImplemented {
   NotImplemented(NotImplemented&&) = default;
 
   void Start(IConsumer<T>*) {
-    std::abort();  // Not implemented
+    std::abort();
   }
 };
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <optional>
+
 #include <exe/futures/thunks/combine/seq/base.hpp>
 
 namespace exe::futures::thunks {

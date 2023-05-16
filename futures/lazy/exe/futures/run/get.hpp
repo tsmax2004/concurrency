@@ -1,5 +1,7 @@
 #pragma once
 
+#include <optional>
+
 #include <exe/threads/event.hpp>
 
 #include <exe/futures/syntax/pipe.hpp>

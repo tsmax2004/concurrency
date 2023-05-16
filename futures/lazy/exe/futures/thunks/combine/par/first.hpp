@@ -1,5 +1,7 @@
 #pragma once
 
+#include <twist/ed/stdlike/atomic.hpp>
+
 #include <exe/futures/model/thunk.hpp>
 
 namespace exe::futures::thunks {

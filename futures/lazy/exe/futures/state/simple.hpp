@@ -1,3 +1,7 @@
+#include <optional>
+
+#include <twist/ed/stdlike/atomic.hpp>
+
 #include <exe/futures/state/shared_state.hpp>
 
 namespace exe::futures::detail {

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <optional>
+
 #include <exe/futures/model/thunk.hpp>
 
 #include <exe/futures/state/box.hpp>
@@ -13,7 +15,7 @@ struct [[nodiscard]] Boxed : IConsumer<T> {
  public:
   // Auto-boxing
   template <Thunk Thunk>
-  Boxed(Thunk thunk) {
+  explicit Boxed(Thunk thunk) {
     shared_state_ = new detail::BoxedSharedState(std::move(thunk));
   }
 
