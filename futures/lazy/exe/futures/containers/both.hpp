@@ -3,6 +3,9 @@
 
 #include <twist/ed/stdlike/atomic.hpp>
 
+#include <exe/result/make/ok.hpp>
+#include <exe/result/make/err.hpp>
+
 #include <exe/futures/model/thunk.hpp>
 
 namespace exe::futures::detail {
