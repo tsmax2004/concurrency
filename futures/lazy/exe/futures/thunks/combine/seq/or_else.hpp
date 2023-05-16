@@ -7,7 +7,7 @@ namespace exe::futures::thunks {
 template <Thunk Producer, typename MapFun,
           typename InputValueType = typename Producer::ValueType,
           typename ValueTypeT = InputValueType>
-struct [[nodiscard]] OrElse : SeqThunk<Producer, ValueTypeT> {
+struct [[nodiscard]] OrElse final : SeqThunk<Producer, ValueTypeT> {
   using ValueType = ValueTypeT;
 
  public:
@@ -16,12 +16,18 @@ struct [[nodiscard]] OrElse : SeqThunk<Producer, ValueTypeT> {
         map_fun_(std::move(f)) {
   }
 
+  // Non-copyable
+  OrElse(const OrElse&) = delete;
+
+  // Movable
+  OrElse(OrElse&&) = default;
+
+ private:
   Result<ValueType> PerformResult() override {
     return SeqThunk<Producer, ValueType>::input_->result.or_else(
         std::move(map_fun_));
   }
 
- private:
   MapFun map_fun_;
 };
 

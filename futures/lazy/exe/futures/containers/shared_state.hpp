@@ -2,12 +2,13 @@
 
 #include <twist/ed/stdlike/atomic.hpp>
 
-#include <exe/futures/state/shared_state.hpp>
+#include <exe/futures/containers/container.hpp>
 
 namespace exe::futures::detail {
 
 template <typename ValueTypeT>
-struct SimpleSharedState : detail::SharedState<ValueTypeT> {
+struct SharedState final : detail::Container<ValueTypeT>,
+                           IConsumer<ValueTypeT> {
   using ValueType = ValueTypeT;
 
  public:

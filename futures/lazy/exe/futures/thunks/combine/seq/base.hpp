@@ -23,7 +23,7 @@ struct [[nodiscard]] SeqThunk : IConsumer<typename Producer::ValueType>,
   SeqThunk(SeqThunk&&) = default;
 
   void Start(IConsumer<ValueType>* consumer) {
-    consumer_ = std::move(consumer);
+    consumer_ = consumer;
     producer_.Start(this);
   }
 

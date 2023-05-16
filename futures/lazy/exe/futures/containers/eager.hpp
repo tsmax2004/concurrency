@@ -2,21 +2,19 @@
 
 #include <twist/ed/stdlike/atomic.hpp>
 
-#include <exe/futures/state/shared_state.hpp>
+#include <exe/futures/containers/container.hpp>
 
 namespace exe::futures::detail {
 
 template <SomeFuture Producer>
-struct EagerSharedState : detail::SharedState<typename Producer::ValueType> {
+struct EagerContainer final : detail::Container<typename Producer::ValueType>,
+                              IConsumer<typename Producer::ValueType> {
   using ValueType = typename Producer::ValueType;
 
  public:
-  explicit EagerSharedState(Producer p)
+  explicit EagerContainer(Producer p)
       : producer_(std::move(p)) {
-  }
-
-  void Start() {
-    producer_.Start(this);
+    producer_.Start(this);  // force start
   }
 
   void Start(IConsumer<ValueType>* consumer) override {

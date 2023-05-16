@@ -1,13 +1,16 @@
-#include <exe/futures/state/shared_state.hpp>
+#pragma once
+
+#include <exe/futures/containers/container.hpp>
 
 namespace exe::futures::detail {
 
 template <SomeFuture Producer>
-struct BoxedSharedState : detail::SharedState<typename Producer::ValueType> {
+struct BoxedContainer final : detail::Container<typename Producer::ValueType>,
+                              IConsumer<typename Producer::ValueType> {
   using ValueType = typename Producer::ValueType;
 
  public:
-  explicit BoxedSharedState(Producer p)
+  explicit BoxedContainer(Producer p)
       : producer_(std::move(p)) {
   }
 

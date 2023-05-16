@@ -2,14 +2,12 @@
 
 #include <optional>
 
-#include <exe/futures/thunks/combine/seq/base.hpp>
-
 namespace exe::futures::thunks {
 
 template <Thunk Producer, typename FutureTypeT = typename Producer::ValueType,
           typename ValueTypeT = typename FutureTypeT::ValueType>
-struct [[nodiscard]] Flatten : IConsumer<ValueTypeT>,
-                               IConsumer<FutureTypeT> {
+struct [[nodiscard]] Flatten final : IConsumer<ValueTypeT>,
+                                     IConsumer<FutureTypeT> {
   using FutureType = FutureTypeT;
   using ValueType = ValueTypeT;
 
@@ -32,7 +30,7 @@ struct [[nodiscard]] Flatten : IConsumer<ValueTypeT>,
  private:
   void Consume(Output<FutureType> future_output) noexcept override {
     future_output_.emplace(std::move(future_output));
-    future_output_.value().result.value().Start(this);
+    future_output_->result.value().Start(this);
   }
 
   void Consume(Output<ValueType> output) noexcept override {

@@ -7,7 +7,7 @@
 #include <exe/result/make/ok.hpp>
 #include <exe/result/make/err.hpp>
 
-#include <exe/futures/state/simple.hpp>
+#include <exe/futures/containers/shared_state.hpp>
 
 #include <tuple>
 
@@ -38,8 +38,8 @@ class Promise {
 
 template <typename T>
 std::tuple<EagerFuture<T>, Promise<T>> Contract() {
-  auto* shared_state = new detail::SimpleSharedState<T>;
-  return {EagerFuture<T>(shared_state), Promise<T>(shared_state)};
+  auto* container = new detail::SharedState<T>();
+  return {EagerFuture<T>(container), Promise<T>(container)};
 }
 
 }  // namespace exe::futures

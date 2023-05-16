@@ -8,8 +8,6 @@
 
 #include <exe/futures/thunks/combine/seq/eager.hpp>
 
-#include <exe/futures/state/shared_state.hpp>
-
 namespace exe::futures {
 
 namespace pipe {
@@ -17,12 +15,7 @@ namespace pipe {
 struct [[nodiscard]] Start {
   template <SomeFuture InputFuture>
   EagerFuture<traits::ValueOf<InputFuture>> Pipe(InputFuture future) {
-    auto* shared_state = new detail::EagerSharedState(std::move(future));
-    shared_state->Start();
-
-    auto eager_future =
-        thunks::Eager<typename InputFuture::ValueType>(shared_state);
-    return std::move(eager_future);
+    return thunks::Eager<typename InputFuture::ValueType>(std::move(future));
   }
 };
 

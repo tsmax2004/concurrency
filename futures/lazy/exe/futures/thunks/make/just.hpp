@@ -9,8 +9,7 @@ struct [[nodiscard]] Just {
   using ValueType = Unit;
 
  public:
-  explicit Just() {
-  }
+  Just() = default;
 
   // Non-copyable
   Just(const Just&) = delete;
@@ -21,8 +20,6 @@ struct [[nodiscard]] Just {
   void Start(IConsumer<ValueType>* consumer) {
     consumer->Complete(result::Ok(Unit()));
   }
-
- private:
 };
 
 }  // namespace exe::futures::thunks

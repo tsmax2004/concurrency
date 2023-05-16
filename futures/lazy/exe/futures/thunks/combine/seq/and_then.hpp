@@ -15,7 +15,7 @@ using ValueTypeT = result::traits::ValueOf<
 }  // namespace traits
 
 template <Thunk Producer, typename MapFun>
-struct [[nodiscard]] AndThen
+struct [[nodiscard]] AndThen final
     : SeqThunk<Producer, traits::ValueTypeT<Producer, MapFun>> {
   using ValueType = traits::ValueTypeT<Producer, MapFun>;
 
@@ -25,12 +25,18 @@ struct [[nodiscard]] AndThen
         map_fun_(std::move(f)) {
   }
 
+  // Non-copyable
+  AndThen(const AndThen&) = delete;
+
+  // Movable
+  AndThen(AndThen&&) = default;
+
+ private:
   Result<ValueType> PerformResult() override {
     return SeqThunk<Producer, ValueType>::input_->result.and_then(
         std::move(map_fun_));
   }
 
- private:
   MapFun map_fun_;
 };
 

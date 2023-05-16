@@ -6,10 +6,8 @@
 
 namespace exe::futures::detail {
 
-template <typename ValueTypeT>
-struct SharedState : IConsumer<ValueTypeT> {
-  using ValueType = ValueTypeT;
-
+template <typename ValueType>
+struct Container {
  public:
   virtual void Start(IConsumer<ValueType>* consumer) = 0;
 };

@@ -2,12 +2,10 @@
 
 #include <exe/futures/model/thunk.hpp>
 
-#include <cstdlib>
-
 namespace exe::futures::thunks {
 
 template <Thunk Wrapped>
-struct [[nodiscard]] Via : IConsumer<typename Wrapped::ValueType> {
+struct [[nodiscard]] Via final : IConsumer<typename Wrapped::ValueType> {
   using ValueType = typename Wrapped::ValueType;
 
  public:

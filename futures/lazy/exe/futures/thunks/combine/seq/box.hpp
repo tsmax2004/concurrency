@@ -4,19 +4,19 @@
 
 #include <exe/futures/model/thunk.hpp>
 
-#include <exe/futures/state/box.hpp>
+#include <exe/futures/containers/boxed.hpp>
 
 namespace exe::futures::thunks {
 
 template <typename T>
-struct [[nodiscard]] Boxed : IConsumer<T> {
+struct [[nodiscard]] Boxed {
   using ValueType = T;
 
  public:
   // Auto-boxing
-  template <Thunk Thunk>
-  Boxed(Thunk thunk) {  // NOLINT
-    shared_state_ = new detail::BoxedSharedState(std::move(thunk));
+  template <Thunk Wrapped>
+  Boxed(Wrapped thunk) {  // NOLINT
+    container_ = new detail::BoxedContainer(std::move(thunk));
   }
 
   // Non-copyable
@@ -26,17 +26,11 @@ struct [[nodiscard]] Boxed : IConsumer<T> {
   Boxed(Boxed&&) = default;
 
   void Start(IConsumer<T>* consumer) {
-    consumer_ = consumer;
-    shared_state_->Start(this);
+    container_->Start(consumer);
   }
 
  private:
-  void Consume(Output<ValueType> output) noexcept override {
-    consumer_->Complete(std::move(output));
-  }
-
-  detail::SharedState<ValueType>* shared_state_;
-  IConsumer<ValueType>* consumer_;
+  detail::Container<ValueType>* container_;
 };
 
 }  // namespace exe::futures::thunks

@@ -22,10 +22,11 @@ using SubmitT = result::traits::ValueOf<std::invoke_result_t<F>>;
 
 template <typename F>
 Future<traits::SubmitT<F>> auto Submit(executors::IExecutor& exe, F fun) {
-  auto tmp = [f = std::move(fun)](Unit) {
+  auto wrapper = [f = std::move(fun)](Unit) {
     return f();
   };
-  return futures::Just() | futures::Via(exe) | futures::AndThen(std::move(tmp));
+  return futures::Just() | futures::Via(exe) |
+         futures::AndThen(std::move(wrapper));
 }
 
 }  // namespace exe::futures

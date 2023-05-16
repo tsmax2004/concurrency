@@ -2,17 +2,22 @@
 
 #include <exe/futures/model/thunk.hpp>
 
-#include <exe/futures/state/eager.hpp>
+#include <exe/futures/containers/eager.hpp>
 
 namespace exe::futures::thunks {
 
-template <typename T>
-struct [[nodiscard]] Eager : IConsumer<T> {
-  using ValueType = T;
+template <typename ValueTypeT>
+struct [[nodiscard]] Eager {
+  using ValueType = ValueTypeT;
 
  public:
-  explicit Eager(detail::SharedState<ValueType>* p)
-      : producer_(p) {
+  template <Thunk Wrapped>
+  explicit Eager(Wrapped thunk) {
+    container_ = new detail::EagerContainer(std::move(thunk));
+  }
+
+  explicit Eager(detail::Container<ValueType>* c)
+      : container_(c) {
   }
 
   // Non-copyable
@@ -22,18 +27,11 @@ struct [[nodiscard]] Eager : IConsumer<T> {
   Eager(Eager&& other) = default;
 
   void Start(IConsumer<ValueType>* consumer) {
-    consumer_ = consumer;
-    producer_->Start(this);
+    container_->Start(consumer);
   }
 
  private:
-  // IConsumer
-  void Consume(Output<ValueType> output) noexcept override {
-    consumer_->Complete(std::move(output));
-  }
-
-  IConsumer<ValueType>* consumer_;
-  detail::SharedState<ValueType>* producer_;
+  detail::Container<ValueType>* container_;
 };
 
 }  // namespace exe::futures::thunks
