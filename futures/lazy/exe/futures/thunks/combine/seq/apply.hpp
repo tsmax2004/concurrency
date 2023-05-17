@@ -20,8 +20,9 @@ concept ApplyTraits = requires(T traits,
 };
 
 template <ApplyTraits ApplyTraits>
-struct [[nodiscard]] Apply : IConsumer<typename ApplyTraits::InputValueType>,
-                             executors::IntrusiveTask {
+struct [[nodiscard]] Apply final
+    : IConsumer<typename ApplyTraits::InputValueType>,
+      executors::IntrusiveTask {
   using Producer = typename ApplyTraits::Producer;
   using MapFun = typename ApplyTraits::MapFun;
   using InputValueType = typename ApplyTraits::InputValueType;

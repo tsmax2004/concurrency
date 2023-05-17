@@ -1,6 +1,6 @@
 #pragma once
 
-#include <exe/futures/types/future.hpp>
+#include <exe/futures/types/boxed.hpp>
 
 #include <exe/futures/traits/value_of.hpp>
 
