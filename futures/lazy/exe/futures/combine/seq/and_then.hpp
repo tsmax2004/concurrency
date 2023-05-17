@@ -5,13 +5,31 @@
 #include <exe/futures/traits/value_of.hpp>
 #include <exe/result/traits/value_of.hpp>
 
-#include <exe/futures/thunks/combine/seq/and_then.hpp>
+#include <exe/futures/thunks/combine/seq/apply.hpp>
 
 #include <type_traits>
 
 namespace exe::futures {
 
 namespace pipe {
+
+template <Thunk ProducerT, typename MapFunT>
+struct ApplyTraitsAndThen {
+  using Producer = ProducerT;
+  using MapFun = MapFunT;
+  using InputValueType = typename Producer::ValueType;
+  using ValueType = result::traits::ValueOf<
+      std::invoke_result_t<MapFun, typename Producer::ValueType>>;
+
+  static bool Shortcut(Result<InputValueType>& input) {
+    return !input.has_value();
+  }
+
+  static Result<ValueType> ComputeResult(Result<InputValueType> input,
+                                         MapFun fun) {
+    return input.and_then(std::move(fun));
+  }
+};
 
 template <typename F>
 struct [[nodiscard]] AndThen {
@@ -29,7 +47,8 @@ struct [[nodiscard]] AndThen {
 
   template <SomeFuture InputFuture>
   Future<U<traits::ValueOf<InputFuture>>> auto Pipe(InputFuture future) {
-    return thunks::AndThen{std::move(future), std::move(fun)};
+    return thunks::Apply<ApplyTraitsAndThen<InputFuture, F>>{std::move(future),
+                                                             std::move(fun)};
   }
 };
 

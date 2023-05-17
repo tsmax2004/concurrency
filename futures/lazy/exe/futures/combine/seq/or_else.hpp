@@ -4,11 +4,28 @@
 
 #include <exe/futures/traits/value_of.hpp>
 
-#include <exe/futures/thunks/combine/seq/or_else.hpp>
+#include <exe/futures/thunks/combine/seq/apply.hpp>
 
 namespace exe::futures {
 
 namespace pipe {
+
+template <Thunk ProducerT, typename MapFunT>
+struct ApplyTraitsOrElse {
+  using Producer = ProducerT;
+  using MapFun = MapFunT;
+  using InputValueType = typename Producer::ValueType;
+  using ValueType = InputValueType;
+
+  static bool Shortcut(Result<InputValueType>& input) {
+    return input.has_value();
+  }
+
+  static Result<ValueType> ComputeResult(Result<InputValueType> input,
+                                         MapFun fun) {
+    return input.or_else(std::move(fun));
+  }
+};
 
 template <typename F>
 struct [[nodiscard]] OrElse {
@@ -20,7 +37,8 @@ struct [[nodiscard]] OrElse {
 
   template <SomeFuture InputFuture>
   Future<traits::ValueOf<InputFuture>> auto Pipe(InputFuture future) {
-    return thunks::OrElse(std::move(future), std::move(fun));
+    return thunks::Apply<ApplyTraitsOrElse<InputFuture, F>>(std::move(future),
+                                                            std::move(fun));
   }
 };
 

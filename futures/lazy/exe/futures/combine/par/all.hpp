@@ -11,8 +11,8 @@
 namespace exe::futures {
 
 template <SomeFuture LeftFuture, SomeFuture RightFuture>
-Future<
-    std::tuple<traits::ValueOf<LeftFuture>, traits::ValueOf<RightFuture>>> auto
+BoxedFuture<
+    std::tuple<traits::ValueOf<LeftFuture>, traits::ValueOf<RightFuture>>>
 Both(LeftFuture f1, RightFuture f2) {
   return thunks::Both(std::move(f1), std::move(f2));
 }

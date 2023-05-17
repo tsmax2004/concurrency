@@ -4,13 +4,30 @@
 
 #include <exe/futures/traits/value_of.hpp>
 
-#include <exe/futures/thunks/combine/seq/map.hpp>
+#include <exe/futures/thunks/combine/seq/apply.hpp>
 
 #include <type_traits>
 
 namespace exe::futures {
 
 namespace pipe {
+
+template <Thunk ProducerT, typename MapFunT>
+struct ApplyTraitsMap {
+  using Producer = ProducerT;
+  using MapFun = MapFunT;
+  using InputValueType = typename Producer::ValueType;
+  using ValueType = std::invoke_result_t<MapFun, InputValueType>;
+
+  static bool Shortcut(Result<InputValueType>& input) {
+    return !input.has_value();
+  }
+
+  static Result<ValueType> ComputeResult(Result<InputValueType> input,
+                                         MapFun fun) {
+    return input.map(std::move(fun));
+  }
+};
 
 template <typename F>
 struct [[nodiscard]] Map {
@@ -25,7 +42,8 @@ struct [[nodiscard]] Map {
 
   template <SomeFuture InputFuture>
   Future<U<traits::ValueOf<InputFuture>>> auto Pipe(InputFuture future) {
-    return thunks::Map(std::move(future), std::move(fun));
+    return thunks::Apply<ApplyTraitsMap<InputFuture, F>>(std::move(future),
+                                                         std::move(fun));
   }
 };
 

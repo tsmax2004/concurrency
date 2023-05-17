@@ -11,7 +11,7 @@
 namespace exe::futures {
 
 template <SomeFuture LeftFuture, SomeFuture RightFuture>
-Future<traits::ValueOf<LeftFuture>> auto First(LeftFuture f1, RightFuture f2) {
+BoxedFuture<traits::ValueOf<LeftFuture>> First(LeftFuture f1, RightFuture f2) {
   static_assert(std::is_same_v<traits::ValueOf<LeftFuture>,
                                traits::ValueOf<RightFuture>>);
 
